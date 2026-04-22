@@ -1,5 +1,5 @@
-# Government Intelligence Bot (PHQ)
-## AI-Powered Decision Support System for Police HQ, Uttar Pradesh
+# GIB - (PHQ)
+## AI-Powered Decision Support System
 ### Hybrid RAG + Knowledge Graph | On-Premise Deployment
 
 ---
