@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.env
+*.egg-info/
+dist/
+build/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+.vite/
+*.local
+
+# Models (large binary files — download separately)
+/models/
+*.gguf
+*.bin
+*.safetensors
+
+# IDE
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+logs/
+
+# Docker volumes (local dev only)
+postgres_data/

@@ -1,0 +1,62 @@
+# ─── API Framework ────────────────────────────────────────────────────────────
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9
+pydantic==2.7.1
+pydantic-settings==2.2.1
+
+# ─── Database Clients ─────────────────────────────────────────────────────────
+qdrant-client==1.9.1
+neo4j==5.20.0
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+elasticsearch==8.13.0
+
+# ─── Message Queue ────────────────────────────────────────────────────────────
+confluent-kafka==2.4.0
+aiokafka==0.10.0
+
+# ─── NLP & ML ─────────────────────────────────────────────────────────────────
+transformers==4.41.0
+torch==2.3.0
+sentence-transformers==3.0.0
+spacy==3.7.4
+indicnlp==0.92            # IndicNLP for Hindi/Urdu processing
+langdetect==1.0.9
+deep-translator==1.11.4
+numpy==1.26.4
+
+# ─── LangGraph / LangChain ────────────────────────────────────────────────────
+langchain==0.2.1
+langchain-community==0.2.1
+langgraph==0.1.4
+langchain-core==0.2.1
+
+# ─── LLM (local Llama via llama-cpp) ─────────────────────────────────────────
+llama-cpp-python==0.2.79
+
+# ─── Social Media Ingestion ───────────────────────────────────────────────────
+tweepy==4.14.0             # X/Twitter API v2
+facebook-sdk==3.1.0
+instaloader==4.10.3        # Instagram public data
+yt-dlp==2024.5.7           # YouTube metadata + transcript download
+feedparser==6.0.11         # RSS news feeds
+httpx==0.27.0
+aiohttp==3.9.5
+beautifulsoup4==4.12.3
+
+# ─── Task Scheduling & Caching ────────────────────────────────────────────────
+apache-airflow==2.9.1
+redis==5.0.4
+celery==5.4.0
+
+# ─── Authentication ───────────────────────────────────────────────────────────
+python-jose[cryptography]==3.3.0
+python-keycloak==3.9.1
+
+# ─── Utilities ────────────────────────────────────────────────────────────────
+python-dotenv==1.0.1
+loguru==0.7.2
+tenacity==8.3.0
+geopy==2.4.1
+hashlib2==1.0.0
