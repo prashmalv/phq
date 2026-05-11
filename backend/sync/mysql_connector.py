@@ -1,10 +1,11 @@
 """
-MySQL connector for Matrix database (up_police_matrix).
-Read-only access via ZeroTier VPN.
+MySQL connector for up_police_matrix database.
+Reads from three tables (in priority order):
+  1. analyzed_data  — individual NLP-enriched posts (1.4M rows, growing at ~30k/day)
+  2. topic          — AI-grouped incident topics (301k rows)
+  3. district_internal_report — official police reports (1k rows, very high value)
 
-IMPORTANT: Column names below are PLACEHOLDERS.
-Replace with actual column names after running scripts/extract_schema.py
-and sharing the output.
+Does NOT read post_bank (635M rows — raw feed, already absorbed into analyzed_data).
 """
 import pymysql
 import pymysql.cursors
@@ -13,43 +14,14 @@ from loguru import logger
 from backend.config import settings
 
 
-# ─── PLACEHOLDER COLUMN MAPPING ──────────────────────────────────────────────
-# Update these after receiving actual schema from client
-# Format: our_name → actual_mysql_column_name
-
-COLUMN_MAP = {
-    "post_id":        "id",              # UPDATE: primary key column name
-    "content":        "content",         # UPDATE: main text column
-    "platform":       "platform",        # UPDATE: twitter/facebook/instagram etc
-    "author":         "author",          # UPDATE: username/handle
-    "author_verified":"is_verified",     # UPDATE: boolean verified column
-    "language":       "detected_language", # UPDATE: language column (confirmed exists)
-    "district":       "district",        # UPDATE: district column
-    "location":       "location",        # UPDATE: city/location column
-    "created_at":     "created_at",      # UPDATE: timestamp column
-    "source_url":     "url",             # UPDATE: original post URL
-    "image_url":      "image_url",       # UPDATE: image link if any
-    "video_url":      "video_url",       # UPDATE: video link if any
-    "likes":          "likes_count",     # UPDATE: engagement metric
-    "shares":         "shares_count",    # UPDATE: shares/retweets
-    "comments":       "comments_count",  # UPDATE: comments count
-    "category":       "category",        # UPDATE: event category if exists, else None
-    "sentiment":      "sentiment",       # UPDATE: sentiment column if exists, else None
-    "hashtags":       "hashtags",        # UPDATE: hashtags column if exists, else None
-}
-
-# Table name — UPDATE after schema extraction
-POSTS_TABLE = "posts"   # most likely name; update after extraction
-
-
 class MySQLConnector:
     def __init__(self):
         self.config = {
-            "host":     settings.MYSQL_HOST,
-            "user":     settings.MYSQL_USER,
-            "password": settings.MYSQL_PASSWORD,
-            "database": settings.MYSQL_DATABASE,
-            "charset":  "utf8mb4",
+            "host":        settings.MYSQL_HOST,
+            "user":        settings.MYSQL_USER,
+            "password":    settings.MYSQL_PASSWORD,
+            "database":    settings.MYSQL_DATABASE,
+            "charset":     "utf8mb4",
             "cursorclass": pymysql.cursors.DictCursor,
             "connect_timeout": 10,
         }
@@ -62,65 +34,175 @@ class MySQLConnector:
         finally:
             conn.close()
 
-    def get_new_records(self, since_id: int, batch_size: int = 500) -> list[dict]:
-        """
-        Fetch records with id > since_id (incremental pull).
-        Returns normalized records ready for embedding.
-        """
-        c = COLUMN_MAP
-        query = f"""
-            SELECT
-                `{c['post_id']}`        AS post_id,
-                `{c['content']}`        AS content,
-                `{c['platform']}`       AS platform,
-                `{c['author']}`         AS author,
-                `{c['language']}`       AS language,
-                `{c['district']}`       AS district,
-                `{c['created_at']}`     AS created_at,
-                `{c['source_url']}`     AS source_url
-            FROM `{POSTS_TABLE}`
-            WHERE `{c['post_id']}` > %s
-              AND `{c['content']}` IS NOT NULL
-              AND `{c['content']}` != ''
-            ORDER BY `{c['post_id']}` ASC
-            LIMIT %s
-        """
-        with self.get_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(query, (since_id, batch_size))
-                rows = cursor.fetchall()
-        return [dict(r) for r in rows]
-
-    def get_max_id(self) -> int:
-        """Get current maximum post_id in MySQL."""
-        c = COLUMN_MAP
-        with self.get_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(f"SELECT MAX(`{c['post_id']}`) AS max_id FROM `{POSTS_TABLE}`")
-                row = cursor.fetchone()
-                return row["max_id"] or 0
-
-    def get_record_by_id(self, post_id: int) -> dict | None:
-        """Fetch a single record for verification."""
-        c = COLUMN_MAP
-        with self.get_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    f"SELECT * FROM `{POSTS_TABLE}` WHERE `{c['post_id']}` = %s",
-                    (post_id,)
-                )
-                row = cursor.fetchone()
-                return dict(row) if row else None
-
     def test_connection(self) -> bool:
-        """Verify VPN + DB connectivity."""
         try:
             with self.get_connection() as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute("SELECT 1")
+                with conn.cursor() as cur:
+                    cur.execute("SELECT 1")
             logger.info("MySQL connection OK")
             return True
         except Exception as e:
             logger.error(f"MySQL connection FAILED: {e}")
-            logger.error("Make sure ZeroTier VPN is connected to network: b6079f73c61bb152")
             return False
+
+    # ─── analyzed_data (main post feed) ──────────────────────────────────────
+
+    def get_analyzed_data(self, since_id: int, batch_size: int = 300) -> list[dict]:
+        """
+        Incremental pull from analyzed_data joined with topic for topic_title.
+        Only fetches records with actual content.
+        """
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT
+                        ad.id,
+                        ad.post_bank_post_snippet      AS content,
+                        ad.enhanced_text,
+                        ad.contextual_understanding,
+                        ad.incidents,
+                        ad.post_bank_post_timestamp    AS occurred_at,
+                        ad.post_bank_core_source       AS platform,
+                        ad.post_bank_source            AS source_detail,
+                        ad.post_bank_author_username   AS author,
+                        ad.post_bank_author_name       AS author_name,
+                        ad.detected_language           AS language,
+                        ad.primary_district            AS district,
+                        ad.primary_thana               AS thana,
+                        ad.primary_location            AS location_str,
+                        ad.broad_category              AS event_type,
+                        ad.sub_category                AS sub_event_type,
+                        ad.sentiment_label             AS sentiment,
+                        ad.sentiment_confidence,
+                        ad.person_names,
+                        ad.organisation_names,
+                        ad.district_names,
+                        ad.hashtags,
+                        ad.keywords_cloud,
+                        ad.post_bank_post_url          AS source_url,
+                        ad.emotional_primary_emotion   AS emotion,
+                        ad.emotional_secondary_emotion AS emotion2,
+                        ad.emotional_intensity,
+                        ad.post_bank_likes             AS likes,
+                        ad.post_bank_views             AS views,
+                        ad.post_bank_retweets          AS retweets,
+                        ad.created_at,
+                        ad.unique_topic_id,
+                        t.topic_title
+                    FROM analyzed_data ad
+                    LEFT JOIN topic t ON ad.unique_topic_id = t.unique_topic_id
+                    WHERE ad.id > %s
+                      AND ad.post_bank_post_snippet IS NOT NULL
+                      AND ad.post_bank_post_snippet != ''
+                    ORDER BY ad.id ASC
+                    LIMIT %s
+                """, (since_id, batch_size))
+                return [dict(r) for r in cur.fetchall()]
+
+    def get_analyzed_data_max_id(self) -> int:
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT MAX(id) AS m FROM analyzed_data")
+                row = cur.fetchone()
+                return row["m"] or 0
+
+    # ─── topic table ─────────────────────────────────────────────────────────
+
+    def get_topics(self, since_id: int, batch_size: int = 200) -> list[dict]:
+        """
+        Pull grouped incident topics. These represent aggregated intelligence.
+        High value — one topic covers many individual posts.
+        """
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT
+                        id,
+                        unique_topic_id,
+                        topic_title,
+                        broad_category,
+                        sub_category,
+                        primary_districts,
+                        primary_thana,
+                        primary_location,
+                        keywords_cloud,
+                        hashtags,
+                        command_center_description,
+                        int_description,
+                        total_no_of_post,
+                        created_at,
+                        updated_at,
+                        topic_status
+                    FROM topic
+                    WHERE id > %s
+                      AND topic_title IS NOT NULL
+                    ORDER BY id ASC
+                    LIMIT %s
+                """, (since_id, batch_size))
+                return [dict(r) for r in cur.fetchall()]
+
+    def get_topics_max_id(self) -> int:
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT MAX(id) AS m FROM topic")
+                row = cur.fetchone()
+                return row["m"] or 0
+
+    def get_updated_topics(self, since_updated_at: str, limit: int = 200) -> list[dict]:
+        """
+        Fetch topics updated after a given datetime — for re-embedding updated topics.
+        Topics get updated as new posts are added to them.
+        """
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT id, unique_topic_id, topic_title, broad_category,
+                           sub_category, primary_districts, keywords_cloud,
+                           command_center_description, int_description,
+                           total_no_of_post, updated_at, topic_status
+                    FROM topic
+                    WHERE updated_at > %s AND topic_title IS NOT NULL
+                    ORDER BY updated_at ASC
+                    LIMIT %s
+                """, (since_updated_at, limit))
+                return [dict(r) for r in cur.fetchall()]
+
+    # ─── district_internal_report ─────────────────────────────────────────────
+
+    def get_internal_reports(self, since_id: int, batch_size: int = 50) -> list[dict]:
+        """
+        Official police internal reports — very high credibility source.
+        Small table (1k rows) but extremely high value for the AI bot.
+        """
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT
+                        id,
+                        district,
+                        thana,
+                        incident_date_time,
+                        incident_description,
+                        crime_type,
+                        accused_names,
+                        victim_name,
+                        arrest_status,
+                        final_remark,
+                        headquater_remark,
+                        dgp_remark,
+                        unique_topic_id,
+                        creation_date
+                    FROM district_internal_report
+                    WHERE id > %s
+                      AND incident_description IS NOT NULL
+                    ORDER BY id ASC
+                    LIMIT %s
+                """, (since_id, batch_size))
+                return [dict(r) for r in cur.fetchall()]
+
+    def get_internal_reports_max_id(self) -> int:
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT MAX(id) AS m FROM district_internal_report")
+                row = cur.fetchone()
+                return row["m"] or 0

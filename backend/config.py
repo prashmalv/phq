@@ -27,7 +27,8 @@ class Settings(BaseSettings):
     # ─── Qdrant (Vector DB) ───────────────────────────────────────────────────
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6333
-    QDRANT_COLLECTION: str = "phq_events"
+    QDRANT_COLLECTION: str = "phq_events"          # analyzed_data posts
+    QDRANT_TOPICS_COLLECTION: str = "phq_topics"   # topic + district_internal_report
     EMBEDDING_MODEL: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     EMBEDDING_DIM: int = 384
 
