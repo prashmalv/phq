@@ -76,6 +76,14 @@ class Settings(BaseSettings):
     KEYCLOAK_CLIENT_ID: str = "phq-api"
     KEYCLOAK_CLIENT_SECRET: Optional[str] = None
 
+    # ─── Report Generation ────────────────────────────────────────────────────
+    SPIKE_THRESHOLD: int = 50         # posts in 6h that trigger an alert report
+    REPORT_EMAIL_RECIPIENTS: list[str] = []  # e.g. ["dgp@uppolice.gov.in"]
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: Optional[str] = None   # sender Gmail address
+    SMTP_PASSWORD: Optional[str] = None
+
     # ─── Geo ──────────────────────────────────────────────────────────────────
     DEFAULT_STATE: str = "Uttar Pradesh"
     UP_DISTRICTS: list[str] = [

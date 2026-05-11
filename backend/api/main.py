@@ -13,7 +13,11 @@ from loguru import logger
 
 from backend.api.routes import health
 from backend.api.routes.chat_v2 import router as chat_v2_router
+from backend.api.routes.reports import router as reports_router
 from backend.sync.embedding_sync import EmbeddingSync
+from backend.reports.generator import ReportGenerator
+from backend.reports.scheduler import ReportScheduler
+from backend.reports.store import init_db as init_reports_db
 
 
 FRONTEND_DEDICATED = Path(__file__).parent.parent.parent / "frontend" / "dedicated"
@@ -24,14 +28,24 @@ FRONTEND_WIDGET = Path(__file__).parent.parent.parent / "frontend" / "widget"
 async def lifespan(app: FastAPI):
     logger.info("Starting PHQ Intelligence Bot API...")
 
+    # Init databases
+    init_reports_db()
+
     # Start embedding sync in background
     syncer = EmbeddingSync()
     sync_task = asyncio.create_task(syncer.run_forever(interval_seconds=60))
     logger.info("Embedding sync loop started")
 
+    # Start report scheduler in background
+    generator = ReportGenerator()
+    scheduler = ReportScheduler(generator)
+    sched_task = asyncio.create_task(scheduler.run_forever())
+    logger.info("Report scheduler started")
+
     yield
 
     sync_task.cancel()
+    sched_task.cancel()
     logger.info("API shutdown complete")
 
 
@@ -62,6 +76,7 @@ app.add_middleware(
 # ─── API routes ──────────────────────────────────────────────────────────────
 app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(chat_v2_router, prefix="/api", tags=["chat"])
+app.include_router(reports_router, prefix="/api", tags=["reports"])
 
 # ─── Static files (widget JS + CSS) ──────────────────────────────────────────
 if FRONTEND_WIDGET.exists():

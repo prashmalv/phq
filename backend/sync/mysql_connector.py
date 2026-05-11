@@ -206,3 +206,91 @@ class MySQLConnector:
                 cur.execute("SELECT MAX(id) AS m FROM district_internal_report")
                 row = cur.fetchone()
                 return row["m"] or 0
+
+    # ─── Aggregate analytics (for report generation) ──────────────────────────
+
+    def get_post_counts_by_date(self, from_date: str, to_date: str) -> list[dict]:
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT DATE(post_bank_post_timestamp) AS date, COUNT(*) AS count
+                    FROM analyzed_data
+                    WHERE post_bank_post_timestamp BETWEEN %s AND %s
+                    GROUP BY date ORDER BY date ASC
+                """, (from_date, to_date))
+                return [dict(r) for r in cur.fetchall()]
+
+    def get_post_counts_by_district(self, from_date: str, to_date: str, limit: int = 15) -> list[dict]:
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT primary_district AS district, COUNT(*) AS count
+                    FROM analyzed_data
+                    WHERE post_bank_post_timestamp BETWEEN %s AND %s
+                      AND primary_district IS NOT NULL AND primary_district != ''
+                    GROUP BY primary_district ORDER BY count DESC LIMIT %s
+                """, (from_date, to_date, limit))
+                return [dict(r) for r in cur.fetchall()]
+
+    def get_sentiment_breakdown(self, from_date: str, to_date: str) -> list[dict]:
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT sentiment_label, COUNT(*) AS count
+                    FROM analyzed_data
+                    WHERE post_bank_post_timestamp BETWEEN %s AND %s
+                      AND sentiment_label IS NOT NULL
+                    GROUP BY sentiment_label ORDER BY count DESC
+                """, (from_date, to_date))
+                return [dict(r) for r in cur.fetchall()]
+
+    def get_platform_breakdown(self, from_date: str, to_date: str) -> list[dict]:
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT post_bank_core_source AS platform, COUNT(*) AS count
+                    FROM analyzed_data
+                    WHERE post_bank_post_timestamp BETWEEN %s AND %s
+                      AND post_bank_core_source IS NOT NULL
+                    GROUP BY post_bank_core_source ORDER BY count DESC
+                """, (from_date, to_date))
+                return [dict(r) for r in cur.fetchall()]
+
+    def get_district_date_matrix(self, from_date: str, to_date: str) -> list[dict]:
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT primary_district AS district,
+                           DATE(post_bank_post_timestamp) AS date,
+                           COUNT(*) AS count
+                    FROM analyzed_data
+                    WHERE post_bank_post_timestamp BETWEEN %s AND %s
+                      AND primary_district IS NOT NULL AND primary_district != ''
+                    GROUP BY primary_district, date ORDER BY district, date
+                """, (from_date, to_date))
+                return [dict(r) for r in cur.fetchall()]
+
+    def get_top_topics_by_period(self, from_date: str, to_date: str, limit: int = 10) -> list[dict]:
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT topic_title, broad_category, primary_districts,
+                           total_no_of_post, command_center_description, int_description
+                    FROM topic
+                    WHERE updated_at BETWEEN %s AND %s
+                      AND topic_title IS NOT NULL
+                    ORDER BY total_no_of_post DESC LIMIT %s
+                """, (from_date, to_date, limit))
+                return [dict(r) for r in cur.fetchall()]
+
+    def check_spike(self, hours: int = 6, threshold: int = 50) -> tuple[bool, int]:
+        """Returns (is_spike, count) for recent N hours."""
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT COUNT(*) AS count FROM analyzed_data
+                    WHERE post_bank_post_timestamp >= NOW() - INTERVAL %s HOUR
+                """, (hours,))
+                row = cur.fetchone()
+                count = row["count"] if row else 0
+                return count >= threshold, count
