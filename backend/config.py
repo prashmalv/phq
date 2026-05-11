@@ -15,6 +15,15 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     LOG_LEVEL: str = "INFO"
 
+    # ─── MySQL (Matrix Database) ──────────────────────────────────────────────
+    MYSQL_HOST: str = "10.242.71.180"
+    MYSQL_USER: str = "readUser"
+    MYSQL_PASSWORD: str = "readUser@123"
+    MYSQL_DATABASE: str = "up_police_matrix"
+
+    # ─── Matrix JWT (get secret from client dev team) ─────────────────────────
+    MATRIX_JWT_SECRET: Optional[str] = None
+
     # ─── Qdrant (Vector DB) ───────────────────────────────────────────────────
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6333

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PHQ Intelligence Bot</title>
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <div class="layout">
+    <!-- Sidebar: session list -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <span class="logo-icon">🛡️</span>
+          <div>
+            <div class="logo-title">PHQ Intelligence</div>
+            <div class="logo-sub">UP Police Bot</div>
+          </div>
+        </div>
+        <button class="new-chat-btn" id="newChatBtn">+ New Chat</button>
+      </div>
+      <div class="sessions-label">Recent Conversations</div>
+      <div class="sessions-list" id="sessionsList">
+        <div class="sessions-empty">No conversations yet</div>
+      </div>
+    </aside>
+
+    <!-- Main chat area -->
+    <main class="chat-main">
+      <div class="chat-header">
+        <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+        <div class="chat-header-title" id="chatTitle">PHQ Intelligence Bot</div>
+        <div class="chat-header-meta" id="chatMeta">Hindi &amp; English supported</div>
+      </div>
+
+      <div class="messages-area" id="messagesArea">
+        <!-- Welcome screen -->
+        <div class="welcome" id="welcomeScreen">
+          <div class="welcome-icon">🤖</div>
+          <h2 class="welcome-title">PHQ Intelligence Bot</h2>
+          <p class="welcome-sub">
+            Ask questions in <strong>Hindi or English</strong> about incidents,
+            social media trends, and public sentiment across Uttar Pradesh.
+          </p>
+          <div class="sample-queries">
+            <div class="sample-label">Sample queries:</div>
+            <div class="sample-grid">
+              <button class="sample-btn">Were there any violence incidents in Varanasi during Kawad Yatra in the last 5 years?</button>
+              <button class="sample-btn">पिछले 30 दिनों में मथुरा में कौन से हादसे हुए?</button>
+              <button class="sample-btn">What is public sentiment about the highway project in Lucknow?</button>
+              <button class="sample-btn">Was there a stampede in any UP temple due to social media misinformation?</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-area">
+        <div class="input-wrapper">
+          <textarea
+            id="queryInput"
+            placeholder="Ask about any incident, district, or trend in Uttar Pradesh…"
+            rows="1"
+          ></textarea>
+          <button class="send-btn" id="sendBtn" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="input-hint">Press Enter to send · Shift+Enter for new line</div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
