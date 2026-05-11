@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const API_BASE = window.PHQ_API_BASE || 'http://localhost:8000';
+const API_BASE = window.PHQ_API_BASE || 'https://aibot.matrixupp.com';
 
 function getToken() {
   // Matrix team: replace with however you store the JWT

@@ -1,28 +1,37 @@
 """
 FastAPI application — main entry point.
-All routes are prefixed with /api/v1
 """
+import asyncio
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from loguru import logger
 
-from backend.api.routes import chat, events, analytics, health
-from backend.api.dependencies import get_container, AppContainer
+from backend.api.routes import health
+from backend.api.routes.chat_v2 import router as chat_v2_router
+from backend.sync.embedding_sync import EmbeddingSync
+
+
+FRONTEND_DEDICATED = Path(__file__).parent.parent.parent / "frontend" / "dedicated"
+FRONTEND_WIDGET = Path(__file__).parent.parent.parent / "frontend" / "widget"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    logger.info("Starting PHQ Government Intelligence Bot API...")
-    container = AppContainer()
-    await container.init()
-    app.state.container = container
-    logger.info("All services initialized")
+    logger.info("Starting PHQ Intelligence Bot API...")
+
+    # Start embedding sync in background
+    syncer = EmbeddingSync()
+    sync_task = asyncio.create_task(syncer.run_forever(interval_seconds=60))
+    logger.info("Embedding sync loop started")
+
     yield
-    # Shutdown
-    await container.close()
+
+    sync_task.cancel()
     logger.info("API shutdown complete")
 
 
@@ -37,13 +46,36 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # restrict in prod
+    allow_origins=[
+        "https://matrixupp.com",
+        "https://aibot.matrixupp.com",
+        # wildcard subdomain support via regex is not native in FastAPI CORS —
+        # list known Matrix subdomains here, or use allow_origins=["*"] internally
+        "http://localhost:8000",
+        "http://localhost:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(health.router, prefix="/api/v1", tags=["health"])
-app.include_router(chat.router, prefix="/api/v1", tags=["chat"])
-app.include_router(events.router, prefix="/api/v1", tags=["events"])
-app.include_router(analytics.router, prefix="/api/v1", tags=["analytics"])
+# ─── API routes ──────────────────────────────────────────────────────────────
+app.include_router(health.router, prefix="/api", tags=["health"])
+app.include_router(chat_v2_router, prefix="/api", tags=["chat"])
+
+# ─── Static files (widget JS + CSS) ──────────────────────────────────────────
+if FRONTEND_WIDGET.exists():
+    app.mount("/static/widget", StaticFiles(directory=str(FRONTEND_WIDGET)), name="widget")
+
+if FRONTEND_DEDICATED.exists():
+    app.mount("/static/app", StaticFiles(directory=str(FRONTEND_DEDICATED)), name="dedicated")
+
+
+# ─── Dedicated chat page (served at root) ────────────────────────────────────
+@app.get("/", include_in_schema=False)
+@app.get("/ai-bot/", include_in_schema=False)
+async def serve_chat_page():
+    index = FRONTEND_DEDICATED / "index.html"
+    if index.exists():
+        return FileResponse(str(index))
+    return {"message": "PHQ Intelligence Bot API", "docs": "/api/docs"}

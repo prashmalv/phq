@@ -28,24 +28,38 @@ def get_agent() -> MatrixQueryAgent:
 
 def decode_matrix_jwt(token: str) -> dict:
     """
-    Decode JWT from Matrix dashboard.
-    In dev mode (no secret configured) returns a dummy officer.
-    UPDATE: Replace 'YOUR_MATRIX_JWT_SECRET' with the actual secret from Matrix team.
+    Decode and validate JWT from Matrix dashboard.
+    Validates signature, issuer (socialMedia), and audience (socialMediaUsers).
+    Falls back to dev mode when DEBUG=True and no token is supplied.
     """
-    if not settings.MATRIX_JWT_SECRET:
+    if settings.DEBUG and not token:
         return {"officer_id": "dev_officer", "name": "Dev Officer"}
     try:
         payload = jwt.decode(
             token,
             settings.MATRIX_JWT_SECRET,
             algorithms=["HS256"],
+            issuer=settings.MATRIX_JWT_ISSUER,
+            audience=settings.MATRIX_JWT_AUDIENCE,
+            options={"verify_exp": True},
+        )
+        officer_id = (
+            payload.get("sub")
+            or payload.get("id")
+            or payload.get("userId")
+            or payload.get("officer_id")
+            or "unknown"
         )
         return {
-            "officer_id": payload.get("sub") or payload.get("id") or payload.get("officer_id"),
-            "name": payload.get("name") or payload.get("username"),
+            "officer_id": str(officer_id),
+            "name": payload.get("name") or payload.get("username") or officer_id,
         }
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
+    except jwt.InvalidAudienceError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token audience")
+    except jwt.InvalidIssuerError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token issuer")
     except Exception:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 

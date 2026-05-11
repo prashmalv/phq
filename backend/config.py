@@ -21,8 +21,10 @@ class Settings(BaseSettings):
     MYSQL_PASSWORD: str = "readUser@123"
     MYSQL_DATABASE: str = "up_police_matrix"
 
-    # ─── Matrix JWT (get secret from client dev team) ─────────────────────────
-    MATRIX_JWT_SECRET: Optional[str] = None
+    # ─── Matrix JWT ───────────────────────────────────────────────────────────
+    MATRIX_JWT_SECRET: str = "UPPOLICESOCIALMEDIAjfndfjkjfnkjnfkfjkdfjdfkjdskfjlskfjsldkfjslkdfjslkdsklfjdUPPOLICE"
+    MATRIX_JWT_ISSUER: str = "socialMedia"
+    MATRIX_JWT_AUDIENCE: str = "socialMediaUsers"
 
     # ─── Qdrant (Vector DB) ───────────────────────────────────────────────────
     QDRANT_HOST: str = "localhost"

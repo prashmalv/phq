@@ -18,7 +18,7 @@
   'use strict';
 
   const script = document.currentScript;
-  const API_BASE = (script && script.dataset.api) || 'http://localhost:8000';
+  const API_BASE = (script && script.dataset.api) || 'https://aibot.matrixupp.com';
   const TOKEN_FN = (script && script.dataset.tokenFn) || 'getMatrixToken';
 
   function getToken() {
