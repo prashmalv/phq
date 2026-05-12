@@ -223,6 +223,8 @@ async def serve_chat():
         content = index.read_text()
         content = content.replace('href="app.css"', 'href="/static/app/app.css"')
         content = content.replace('src="app.js"',   'src="/static/app/app.js"')
+        # Override API_BASE to same origin (avoids hitting production server)
+        content = content.replace('</head>', '<script>window.PHQ_API_BASE="";</script></head>')
         banner = (
             '<div style="background:#d97706;color:#fff;text-align:center;'
             'padding:7px 12px;font-size:12.5px;font-weight:500;">'
