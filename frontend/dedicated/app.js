@@ -112,7 +112,7 @@ function startNewChat() {
   messagesArea.innerHTML = `
     <div class="welcome" id="welcomeScreen">
       <div class="welcome-icon">🤖</div>
-      <h2 class="welcome-title">PHQ Intelligence Bot</h2>
+      <h2 class="welcome-title">Matrix AI Sahayak</h2>
       <p class="welcome-sub">
         Ask questions in <strong>Hindi or English</strong> about incidents,
         social media trends, and public sentiment across Uttar Pradesh.
@@ -135,7 +135,7 @@ function startNewChat() {
     });
   });
   document.querySelectorAll('.session-item').forEach(el => el.classList.remove('active'));
-  chatTitle.textContent = 'PHQ Intelligence Bot';
+  chatTitle.textContent = 'Matrix AI Sahayak';
   queryInput.focus();
 }
 
@@ -178,7 +178,7 @@ async function handleSend() {
 
     // Refresh session list & update title
     loadSessions();
-    if (!chatTitle.textContent || chatTitle.textContent === 'PHQ Intelligence Bot') {
+    if (!chatTitle.textContent || chatTitle.textContent === 'Matrix AI Sahayak') {
       chatTitle.textContent = text.slice(0, 40) + (text.length > 40 ? '…' : '');
     }
   } catch (err) {

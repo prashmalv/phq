@@ -216,6 +216,9 @@ def _render_html(title, from_date, to_date, stats, narrative, report_id) -> str:
   .kpi{{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;text-align:center}}
   .kpi-val{{font-size:26px;font-weight:bold;color:#1e4d8c}}
   .kpi-label{{font-size:11px;color:#6b7280;margin-top:2px}}
+  .print-btn{{display:inline-flex;align-items:center;gap:6px;background:#1e4d8c;color:#fff;
+    border:none;padding:9px 18px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600}}
+  .print-btn:hover{{background:#1a3a6b}}
   @media print{{.no-print{{display:none}}}}
 </style>
 </head>
@@ -226,7 +229,10 @@ def _render_html(title, from_date, to_date, stats, narrative, report_id) -> str:
   <p>Reporting Period: {from_date} – {to_date} | Geography: Uttar Pradesh</p>
   <p style="font-size:11px;margin-top:8px">Report ID: {report_id} | Generated: {now} | PHQ Intelligence Bot</p>
 </div>
-<div class="meta">CONFIDENTIAL — For Senior Officers Only</div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+  <div class="meta" style="margin:0">CONFIDENTIAL — For Senior Officers Only</div>
+  <button class="print-btn no-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+</div>
 
 <div class="kpi-grid">
   <div class="kpi"><div class="kpi-val">{total:,}</div><div class="kpi-label">कुल पोस्ट/उल्लेख</div></div>

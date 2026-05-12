@@ -1,19 +1,19 @@
 """
-PHQ Intelligence Bot — Local Demo Runner
-=========================================
+Matrix AI Sahayak — Local Demo Runner
+=======================================
 Starts a mock server on http://localhost:8000 with pre-loaded Smart Meter
 incident data. No MySQL, Qdrant, or LLM required.
 
 Usage:
   cd /path/to/PHQ
-  pip install fastapi uvicorn
-  python scripts/run_demo.py
+  ./demo.sh
 """
 import json
 import os
 import sys
 import threading
 import time
+import uuid
 import webbrowser
 from datetime import datetime
 from pathlib import Path
@@ -147,23 +147,48 @@ Note: यह Coordinated Political Campaign है, Coordinated Inauthentic Beha
     },
 }
 
-SAMPLE_REPORT_HTML = open(ROOT / "docs" / "sample_report.html").read() if (ROOT / "docs" / "sample_report.html").exists() else None
+# ─── In-memory session store ───────────────────────────────────────────────────
+# { session_id: { "title": str, "messages": [...], "updated_at": str } }
+_sessions: dict = {}
+
+
+def _make_session_id() -> str:
+    return f"demo-{uuid.uuid4().hex[:8]}"
+
+
+def _store_turn(session_id: str, query: str, response: dict):
+    now = datetime.utcnow().isoformat()
+    if session_id not in _sessions:
+        _sessions[session_id] = {
+            "title": query[:60].strip(),
+            "messages": [],
+            "updated_at": now,
+        }
+    sess = _sessions[session_id]
+    sess["messages"].append({"role": "user", "content": query, "meta": None})
+    sess["messages"].append({
+        "role": "assistant",
+        "content": response["answer"],
+        "meta": {
+            "confidence": response["confidence"],
+            "evidence_count": response["evidence_count"],
+            "sources": response["sources"],
+            "latency_ms": response["latency_ms"],
+        },
+    })
+    sess["updated_at"] = datetime.utcnow().isoformat()
+
 
 # ─── FastAPI Demo App ──────────────────────────────────────────────────────────
 
-app = FastAPI(title="PHQ Intelligence Bot — Demo Mode", docs_url="/api/docs")
+app = FastAPI(title="Matrix AI Sahayak — Demo Mode", docs_url="/api/docs")
 
-# Serve frontend static files
 _dedicated = ROOT / "frontend" / "dedicated"
 _widget = ROOT / "frontend" / "widget"
 if _dedicated.exists():
     app.mount("/static/app", StaticFiles(directory=str(_dedicated)), name="app")
 if _widget.exists():
     app.mount("/static/widget", StaticFiles(directory=str(_widget)), name="widget")
-
-
-def _mock_officer():
-    return {"officer_id": "demo_officer", "name": "Demo Officer"}
 
 
 def _match_query(query: str) -> dict:
@@ -196,10 +221,8 @@ async def serve_chat():
     index = _dedicated / "index.html"
     if index.exists():
         content = index.read_text()
-        # Fix relative asset paths → absolute (served under /static/app/)
         content = content.replace('href="app.css"', 'href="/static/app/app.css"')
         content = content.replace('src="app.js"',   'src="/static/app/app.js"')
-        # Demo mode banner
         banner = (
             '<div style="background:#d97706;color:#fff;text-align:center;'
             'padding:7px 12px;font-size:12.5px;font-weight:500;">'
@@ -208,8 +231,8 @@ async def serve_chat():
         )
         content = content.replace("<body>", f"<body>{banner}")
         return HTMLResponse(content)
-    return HTMLResponse("<h2>PHQ Intelligence Bot — Demo Mode</h2>"
-                        "<p>Run from repo root: <code>python scripts/run_demo.py</code></p>")
+    return HTMLResponse("<h2>Matrix AI Sahayak — Demo Mode</h2>"
+                        "<p>Run from repo root: <code>./demo.sh</code></p>")
 
 
 @app.post("/api/v2/chat/query")
@@ -218,27 +241,40 @@ async def chat_query(
     authorization: str = Header(default="Bearer demo"),
 ):
     query = request.get("query", "")
-    session_id = request.get("session_id") or f"demo-{int(time.time())}"
+    session_id = request.get("session_id") or None
+
+    # Create new session only if no valid existing session sent
+    if not session_id or session_id not in _sessions:
+        session_id = _make_session_id()
+
     response = _match_query(query)
-    return {
-        "session_id": session_id,
-        **response,
-    }
+    _store_turn(session_id, query, response)
+
+    return {"session_id": session_id, **response}
 
 
 @app.get("/api/v2/chat/sessions")
 async def list_sessions(authorization: str = Header(default="Bearer demo")):
-    return [
-        {"session_id": "demo-session-1", "title": "Smart meter protest ke baare mein batao", "updated_at": datetime.utcnow().isoformat()},
-        {"session_id": "demo-session-2", "title": "Agra mein kya hua?", "updated_at": datetime.utcnow().isoformat()},
+    sessions = [
+        {"session_id": sid, "title": s["title"], "updated_at": s["updated_at"]}
+        for sid, s in _sessions.items()
     ]
+    return sorted(sessions, key=lambda x: x["updated_at"], reverse=True)
 
 
 @app.get("/api/v2/chat/sessions/{session_id}/messages")
 async def get_session(session_id: str, authorization: str = Header(default="Bearer demo")):
+    if session_id not in _sessions:
+        return []
+    sess = _sessions[session_id]
     return [
-        {"role": "user", "content": "Smart meter protest ke baare mein batao", "created_at": datetime.utcnow().isoformat()},
-        {"role": "assistant", "content": MOCK_ANSWERS["smart meter"]["answer"], "created_at": datetime.utcnow().isoformat()},
+        {
+            "role": m["role"],
+            "content": m["content"],
+            "meta": m.get("meta"),
+            "created_at": sess["updated_at"],
+        }
+        for m in sess["messages"]
     ]
 
 
@@ -262,26 +298,43 @@ async def health():
 
 def _generate_inline_sample_report() -> str:
     return """<!DOCTYPE html><html lang="hi"><head><meta charset="UTF-8"/>
-<title>Sample Intelligence Report</title>
-<style>body{font-family:Arial,sans-serif;max-width:1000px;margin:0 auto;padding:20px}
+<title>Sample Intelligence Report — Matrix AI Sahayak</title>
+<style>
+body{font-family:Arial,sans-serif;max-width:1000px;margin:0 auto;padding:20px;color:#1a1a1a}
 .h{background:#1a3a6b;color:#fff;padding:24px;text-align:center}
+.h h1{margin:0;font-size:20px;letter-spacing:1px}
+.h p{margin:5px 0 0;font-size:13px;opacity:.85}
 .s{background:#1e4d8c;color:#fff;padding:8px 14px;font-weight:bold;margin-top:18px}
-table{width:100%;border-collapse:collapse;margin:10px 0}th{background:#1e4d8c;color:#fff;padding:7px}
-td{padding:6px;border-bottom:1px solid #e5e7eb}tr:nth-child(even){background:#f9fafb}
+table{width:100%;border-collapse:collapse;margin:10px 0}
+th{background:#1e4d8c;color:#fff;padding:7px 10px;text-align:left}
+td{padding:6px 10px;border-bottom:1px solid #e5e7eb}
+tr:nth-child(even){background:#f9fafb}
 .box{background:#eff6ff;border-left:4px solid #1e4d8c;padding:10px;margin:8px 0}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}
+.kpi{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;text-align:center}
+.kpi-val{font-size:26px;font-weight:bold;color:#1e4d8c}
+.kpi-label{font-size:11px;color:#6b7280;margin-top:2px}
+.print-btn{display:inline-flex;align-items:center;gap:6px;background:#1e4d8c;color:#fff;
+  border:none;padding:9px 18px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600}
+.print-btn:hover{background:#1a3a6b}
+.print-bar{text-align:right;margin-bottom:12px}
+@media print{.print-bar{display:none}}
 </style></head><body>
-<div class="h"><h1>Social Media Intelligence Report</h1>
-<p>Issue: Smart Meter Agitation — Uttar Pradesh</p>
-<p>Reporting Period: 28 April 2026 – 04 May 2026</p></div>
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0">
-<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;text-align:center">
-<div style="font-size:26px;font-weight:bold;color:#1e4d8c">773</div><div style="font-size:11px;color:#6b7280">कुल पोस्ट/उल्लेख</div></div>
-<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;text-align:center">
-<div style="font-size:26px;font-weight:bold;color:#dc2626">87.3%</div><div style="font-size:11px;color:#6b7280">नकारात्मक भावना</div></div>
-<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;text-align:center">
-<div style="font-size:26px;font-weight:bold;color:#1e4d8c">302</div><div style="font-size:11px;color:#6b7280">Peak Day (03 May)</div></div>
-<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;text-align:center">
-<div style="font-size:26px;font-weight:bold;color:#1e4d8c">32</div><div style="font-size:11px;color:#6b7280">प्रभावित जिले</div></div></div>
+<div class="h">
+  <h1>Social Media Intelligence Report</h1>
+  <p>Issue: Smart Meter Agitation — Uttar Pradesh</p>
+  <p>Reporting Period: 28 April 2026 – 04 May 2026</p>
+  <p style="font-size:11px;margin-top:6px;opacity:.7">CONFIDENTIAL — For Senior Officers Only | Matrix AI Sahayak</p>
+</div>
+<div class="print-bar">
+  <button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+</div>
+<div class="kpi-grid">
+<div class="kpi"><div class="kpi-val">773</div><div class="kpi-label">कुल पोस्ट/उल्लेख</div></div>
+<div class="kpi"><div class="kpi-val" style="color:#dc2626">87.3%</div><div class="kpi-label">नकारात्मक भावना</div></div>
+<div class="kpi"><div class="kpi-val">302</div><div class="kpi-label">Peak Day (03 May)</div></div>
+<div class="kpi"><div class="kpi-val">32</div><div class="kpi-label">प्रभावित जिले</div></div>
+</div>
 <div class="s">SECTION 1 — Brief Summary</div>
 <div class="box"><p>उत्तर प्रदेश में प्रीपेड Smart बिजली मीटर लगाने की सरकारी योजना के विरोध में 28 अप्रैल 2026 से 4 मई 2026 तक सोशल मीडिया पर एक बड़ा डिजिटल आंदोलन देखा गया। इस पूरे सप्ताह में कुल 773 पोस्ट/उल्लेख दर्ज किए गए।</p></div>
 <div class="s">SECTION 2 — Activity Pattern</div>
@@ -303,15 +356,18 @@ td{padding:6px;border-bottom:1px solid #e5e7eb}tr:nth-child(even){background:#f9
 <tr><td>फतेहपुर</td><td>49</td><td>मीटर उखाड़कर बिजलीघर में फेंके</td></tr></table>
 <div class="s">SECTION 13 — Recommendations</div>
 <div style="background:#f0fdf4;border-left:4px solid #22c55e;padding:10px;margin:8px 0">
-<ul style="list-style:none;padding:0"><li style="margin:6px 0">• आगरा FIR की समीक्षा — 500-600 अज्ञात ग्रामीणों पर FIR का narrative बेहद नकारात्मक</li>
+<ul style="list-style:none;padding:0">
+<li style="margin:6px 0">• आगरा FIR की समीक्षा — 500-600 अज्ञात ग्रामीणों पर FIR का narrative बेहद नकारात्मक</li>
 <li style="margin:6px 0">• UPPCL की ओर से fact-based counter-narrative — 'Smart Meter से बिल कम होता है'</li>
 <li style="margin:6px 0">• Grievance helpline prominently promote करें — Twitter और WhatsApp पर</li>
 <li style="margin:6px 0">• आगरा, फिरोजाबाद, लखनऊ में district-level जनसंवाद कार्यक्रम</li>
-<li style="margin:6px 0">• Smart Meter Demo Campaign — 'आपका Smart Meter कैसे काम करता है' video series</li></ul>
+<li style="margin:6px 0">• Smart Meter Demo Campaign — 'आपका Smart Meter कैसे काम करता है' video series</li>
+</ul>
 </div>
 <div style="margin-top:24px;padding:12px;background:#f9fafb;border:1px solid #e5e7eb;font-size:12px;color:#6b7280">
-This is a DEMO report. Production system generates this automatically from live MySQL data every day at 8 AM IST.
-</div></body></html>"""
+DEMO report — Production system generates this automatically from live MySQL data every day at 8 AM IST.
+</div>
+</body></html>"""
 
 
 # ─── Entry point ──────────────────────────────────────────────────────────────
@@ -319,7 +375,7 @@ This is a DEMO report. Production system generates this automatically from live 
 def main():
     port = 8000
     print("\n" + "="*60)
-    print("  PHQ Intelligence Bot — DEMO MODE")
+    print("  Matrix AI Sahayak — DEMO MODE")
     print("="*60)
     print(f"\n  URL: http://localhost:{port}")
     print(f"  API Docs: http://localhost:{port}/api/docs")
@@ -333,7 +389,6 @@ def main():
     print("\n  Press Ctrl+C to stop")
     print("="*60 + "\n")
 
-    # Open browser after 1.5s delay
     def open_browser():
         time.sleep(1.5)
         webbrowser.open(f"http://localhost:{port}")
