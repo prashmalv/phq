@@ -190,14 +190,63 @@ async function handleSend() {
   }
 }
 
+// ─── Markdown renderer ────────────────────────────────────────────────────────
+function renderMarkdown(text) {
+  // Escape HTML first
+  let h = text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  // Tables: |col|col| rows (simple)
+  h = h.replace(/(\|.+\|\n)+/g, (block) => {
+    const rows = block.trim().split('\n').filter(r => !/^\|[-:| ]+\|$/.test(r));
+    if (!rows.length) return block;
+    const toRow = (r, tag) =>
+      '<tr>' + r.split('|').filter((_, i, a) => i > 0 && i < a.length - 1)
+        .map(c => `<${tag}>${c.trim()}</${tag}>`).join('') + '</tr>';
+    const [head, ...body] = rows;
+    return `<table><thead>${toRow(head,'th')}</thead><tbody>${body.map(r=>toRow(r,'td')).join('')}</tbody></table>`;
+  });
+
+  // Bold, italic, inline code
+  h = h
+    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`([^`\n]+)`/g, '<code>$1</code>');
+
+  // Headers (## or ###)
+  h = h.replace(/^#{1,3} (.+)$/gm, '<span class="md-h">$1</span>');
+
+  // Horizontal rule
+  h = h.replace(/^---+$/gm, '<hr class="md-sep">');
+
+  // Bullet lists (•, -, *)
+  h = h.replace(/^[•\-\*] (.+)$/gm,
+    '<div class="md-li"><span>•</span><span>$1</span></div>');
+  // Numbered lists
+  h = h.replace(/^(\d+)\. (.+)$/gm,
+    '<div class="md-li"><span>$1.</span><span>$2</span></div>');
+
+  // Newlines → breaks (but don't double-break after block elements)
+  h = h.replace(/\n\n/g, '<br>').replace(/\n/g, '<br>');
+
+  return h;
+}
+
 // ─── Render helpers ───────────────────────────────────────────────────────────
 function appendMessage(role, text, meta) {
   const msg = document.createElement('div');
   msg.className = `msg ${role}`;
+
+  const avatar = role === 'user' ? '👤' : '🛡️';
+  const bubble = role === 'assistant'
+    ? `<div class="bubble">${renderMarkdown(text)}</div>`
+    : `<div class="bubble">${escHtml(text)}</div>`;
+
   msg.innerHTML = `
-    <div class="avatar">${role === 'user' ? '👤' : '🤖'}</div>
-    <div>
-      <div class="bubble">${escHtml(text)}</div>
+    <div class="avatar">${avatar}</div>
+    <div class="msg-content">
+      ${bubble}
       ${meta ? renderMeta(meta) : ''}
     </div>`;
   messagesArea.appendChild(msg);
@@ -207,11 +256,13 @@ function appendMessage(role, text, meta) {
 function renderMeta(meta) {
   const conf = meta.confidence || 0;
   const confClass = conf >= 0.7 ? 'conf-high' : conf >= 0.4 ? 'conf-med' : 'conf-low';
+  const sources = (meta.sources || [])
+    .map(s => `<span class="src-pill">${escHtml(s)}</span>`).join('');
   const parts = [
-    `<span class="${confClass}">${Math.round(conf * 100)}% confidence</span>`,
+    `<span class="${confClass}">⬤ ${Math.round(conf * 100)}% confidence</span>`,
     meta.evidence_count != null ? `<span>${meta.evidence_count} records</span>` : '',
     meta.latency_ms != null ? `<span>${meta.latency_ms}ms</span>` : '',
-    meta.sources?.length ? `<span>${escHtml(meta.sources.join(', '))}</span>` : '',
+    sources,
   ].filter(Boolean);
   return `<div class="msg-meta">${parts.join('')}</div>`;
 }

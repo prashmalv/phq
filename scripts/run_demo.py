@@ -196,13 +196,20 @@ async def serve_chat():
     index = _dedicated / "index.html"
     if index.exists():
         content = index.read_text()
-        # Inject demo banner
-        banner = """<div style="background:#f97316;color:#fff;text-align:center;padding:8px;font-size:13px">
-        🎯 DEMO MODE — Mock data from Smart Meter Agitation (Apr-May 2026). Production will use live MySQL data.
-        </div>"""
+        # Fix relative asset paths → absolute (served under /static/app/)
+        content = content.replace('href="app.css"', 'href="/static/app/app.css"')
+        content = content.replace('src="app.js"',   'src="/static/app/app.js"')
+        # Demo mode banner
+        banner = (
+            '<div style="background:#d97706;color:#fff;text-align:center;'
+            'padding:7px 12px;font-size:12.5px;font-weight:500;">'
+            '🎯 DEMO MODE — Mock data from Smart Meter Agitation (Apr–May 2026). '
+            'Production will use live MySQL data.</div>'
+        )
         content = content.replace("<body>", f"<body>{banner}")
         return HTMLResponse(content)
-    return HTMLResponse("<h2>PHQ Intelligence Bot — Demo Mode</h2><p>Frontend files not found. Run from repo root.</p>")
+    return HTMLResponse("<h2>PHQ Intelligence Bot — Demo Mode</h2>"
+                        "<p>Run from repo root: <code>python scripts/run_demo.py</code></p>")
 
 
 @app.post("/api/v2/chat/query")

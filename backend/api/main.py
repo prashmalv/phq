@@ -92,5 +92,10 @@ if FRONTEND_DEDICATED.exists():
 async def serve_chat_page():
     index = FRONTEND_DEDICATED / "index.html"
     if index.exists():
-        return FileResponse(str(index))
+        from fastapi.responses import HTMLResponse
+        content = index.read_text()
+        # Fix relative asset paths to absolute (assets served at /static/app/)
+        content = content.replace('href="app.css"', 'href="/static/app/app.css"')
+        content = content.replace('src="app.js"',   'src="/static/app/app.js"')
+        return HTMLResponse(content)
     return {"message": "PHQ Intelligence Bot API", "docs": "/api/docs"}

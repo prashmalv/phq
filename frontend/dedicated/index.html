@@ -8,17 +8,18 @@
 </head>
 <body>
   <div class="layout">
-    <!-- Sidebar: session list -->
+
+    <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="logo">
-          <span class="logo-icon">🛡️</span>
+          <div class="logo-icon">🛡️</div>
           <div>
             <div class="logo-title">PHQ Intelligence</div>
-            <div class="logo-sub">UP Police Bot</div>
+            <div class="logo-sub">UP Police · AI Bot</div>
           </div>
         </div>
-        <button class="new-chat-btn" id="newChatBtn">+ New Chat</button>
+        <button class="new-chat-btn" id="newChatBtn">New Conversation</button>
       </div>
       <div class="sessions-label">Recent Conversations</div>
       <div class="sessions-list" id="sessionsList">
@@ -26,36 +27,41 @@
       </div>
     </aside>
 
-    <!-- Main chat area -->
+    <!-- Main -->
     <main class="chat-main">
       <div class="chat-header">
         <button class="sidebar-toggle" id="sidebarToggle">☰</button>
         <div class="chat-header-title" id="chatTitle">PHQ Intelligence Bot</div>
-        <div class="chat-header-meta" id="chatMeta">Hindi &amp; English supported</div>
+        <div class="chat-header-meta">Hindi &amp; English</div>
       </div>
 
       <div class="messages-area" id="messagesArea">
         <!-- Welcome screen -->
         <div class="welcome" id="welcomeScreen">
-          <div class="welcome-icon">🤖</div>
+          <div class="welcome-icon">🛡️</div>
           <h2 class="welcome-title">PHQ Intelligence Bot</h2>
           <p class="welcome-sub">
-            Ask questions in <strong>Hindi or English</strong> about incidents,
-            social media trends, and public sentiment across Uttar Pradesh.
+            UP के किसी भी जिले के incidents, social media trends और public sentiment
+            के बारे में <strong>Hindi या English</strong> में पूछें।
           </p>
           <div class="sample-queries">
-            <div class="sample-label">Sample queries:</div>
+            <div class="sample-label">Sample queries to get started</div>
             <div class="sample-grid">
-              <button class="sample-btn">Were there any violence incidents in Varanasi during Kawad Yatra in the last 5 years?</button>
+              <button class="sample-btn">Smart meter protest ke baare mein batao</button>
               <button class="sample-btn">पिछले 30 दिनों में मथुरा में कौन से हादसे हुए?</button>
-              <button class="sample-btn">What is public sentiment about the highway project in Lucknow?</button>
-              <button class="sample-btn">Was there a stampede in any UP temple due to social media misinformation?</button>
+              <button class="sample-btn">Agra mein kya situation hai law and order ki?</button>
+              <button class="sample-btn">AAP ka role kya hai smart meter protest mein?</button>
             </div>
           </div>
         </div>
       </div>
 
       <div class="input-area">
+        <div class="reports-bar">
+          <a href="/api/v2/reports/RPT-DEMO/html" target="_blank" class="reports-link">
+            📊 View Intelligence Report
+          </a>
+        </div>
         <div class="input-wrapper">
           <textarea
             id="queryInput"
@@ -63,16 +69,16 @@
             rows="1"
           ></textarea>
           <button class="send-btn" id="sendBtn" disabled>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
             </svg>
           </button>
         </div>
-        <div class="input-hint">Press Enter to send · Shift+Enter for new line</div>
+        <div class="input-hint">Enter to send · Shift+Enter for new line</div>
       </div>
     </main>
-  </div>
 
+  </div>
   <script src="app.js"></script>
 </body>
 </html>
