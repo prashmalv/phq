@@ -373,8 +373,12 @@ function initLiveStream() {
 
   let open = false;
 
-  function setChannel(channelId) {
-    frame.src = `https://www.youtube.com/embed/live_stream?channel=${channelId}&autoplay=1&mute=1`;
+  function setChannel(val) {
+    // val starts with "ch:" → channel-based live stream; otherwise it's a video ID
+    const src = val.startsWith('ch:')
+      ? `https://www.youtube.com/embed/live_stream?channel=${val.slice(3)}&autoplay=1&mute=1`
+      : `https://www.youtube.com/embed/${val}?autoplay=1&mute=1`;
+    frame.src = src;
   }
 
   toggle.addEventListener('click', () => {
