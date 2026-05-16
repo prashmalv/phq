@@ -150,14 +150,51 @@ Note: यह Coordinated Political Campaign है, Coordinated Inauthentic Beha
     },
 }
 
-# ─── Live news fetcher (Google News RSS — no API key needed) ──────────────────
+# ─── Live news fetcher ────────────────────────────────────────────────────────
+# Multiple RSS sources tried in order; first one to return items wins.
+# Google News blocks cloud server IPs, so we use NDTV / TOI / IndiaTVNews first.
 
 _news_cache: dict = {"items": [], "fetched_at": None}
-_NEWS_TTL = 1800  # 30 minutes
+_NEWS_TTL = 1800  # 30-minute cache
+
+_RSS_SOURCES = [
+    # (label, url)
+    ("NDTV",          "https://feeds.feedburner.com/ndtvnews-india-news"),
+    ("Times of India","https://timesofindia.indiatimes.com/rssfeeds/296589292.cms"),
+    ("India TV",      "https://www.indiatvnews.com/rssnews/india.xml"),
+    ("Hindustan Times","https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml"),
+    # Google News as last-resort (may be blocked on some cloud IPs)
+    ("Google News",
+     "https://news.google.com/rss/search?q=uttar+pradesh+police&hl=en-IN&gl=IN&ceid=IN:en"),
+]
+
+_UP_KEYWORDS = {
+    "uttar pradesh", "up police", "lucknow", "agra", "varanasi", "kanpur",
+    "mathura", "firozabad", "allahabad", "prayagraj", "meerut", "noida",
+    "ghaziabad", "bareilly", "gorakhpur", "law order", "protest", "agitation",
+    "fir", "arrest", "crime", "incident",
+}
 
 
 def _strip_html(text: str) -> str:
     return _re.sub(r"<[^>]+>", "", text or "").strip()
+
+
+def _fetch_rss(url: str, label: str, max_items: int = 8) -> list[dict]:
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    })
+    with urllib.request.urlopen(req, timeout=8) as resp:
+        root = ET.fromstring(resp.read())
+    items = []
+    for item in root.findall(".//item")[:max_items]:
+        title = _strip_html(item.findtext("title", ""))
+        desc  = _strip_html(item.findtext("description", ""))[:300]
+        pub   = (item.findtext("pubDate", "") or "")[:22]
+        if title:
+            items.append({"title": title, "description": desc,
+                          "pub_date": pub, "source": label})
+    return items
 
 
 def _fetch_up_news() -> list[dict]:
@@ -169,36 +206,24 @@ def _fetch_up_news() -> list[dict]:
     ):
         return _news_cache["items"]
 
-    queries = [
-        "uttar pradesh police law order",
-        "UP social media agitation protest",
-        "Lucknow Agra Varanasi Kanpur incident crime",
-    ]
-    items: list[dict] = []
-    for q in queries:
+    all_items: list[dict] = []
+    for label, url in _RSS_SOURCES:
         try:
-            url = (
-                "https://news.google.com/rss/search?q="
-                + q.replace(" ", "+")
-                + "&hl=en-IN&gl=IN&ceid=IN:en"
-            )
-            req = urllib.request.Request(
-                url, headers={"User-Agent": "Mozilla/5.0 (PHQ-Demo)"}
-            )
-            with urllib.request.urlopen(req, timeout=7) as resp:
-                root = ET.fromstring(resp.read())
-            for item in root.findall(".//item")[:5]:
-                title = _strip_html(item.findtext("title", ""))
-                desc  = _strip_html(item.findtext("description", ""))[:280]
-                pub   = (item.findtext("pubDate", "") or "")[:22]
-                src   = _strip_html(item.findtext("source", "") or "Google News")
-                if title:
-                    items.append({"title": title, "description": desc,
-                                  "pub_date": pub, "source": src})
+            fetched = _fetch_rss(url, label)
+            # Keep only India/UP relevant items from national feeds
+            relevant = [
+                it for it in fetched
+                if any(kw in (it["title"] + it["description"]).lower()
+                       for kw in _UP_KEYWORDS)
+            ]
+            all_items.extend(relevant or fetched[:3])  # fallback: take top 3 anyway
+            print(f"  [news] {label}: {len(fetched)} fetched, {len(relevant)} UP-relevant")
+            if len(all_items) >= 10:
+                break
         except Exception as e:
-            print(f"  [news] {q[:30]}… → {e}")
+            print(f"  [news] {label}: {e}")
 
-    _news_cache["items"] = items[:15]
+    _news_cache["items"] = all_items[:15]
     _news_cache["fetched_at"] = now
     return _news_cache["items"]
 
@@ -206,6 +231,8 @@ def _fetch_up_news() -> list[dict]:
 def _news_response(query: str) -> dict:
     all_news = _fetch_up_news()
     q_words = {w.lower() for w in query.split() if len(w) > 3}
+
+    # Score each article by keyword overlap with the query
     scored = []
     for item in all_news:
         text = (item["title"] + " " + item["description"]).lower()
@@ -215,8 +242,12 @@ def _news_response(query: str) -> dict:
     scored.sort(key=lambda x: -x[0])
     hits = [it for _, it in scored[:5]]
 
+    # If no keyword match, just show recent UP news as context
+    if not hits and all_news:
+        hits = all_news[:4]
+
     if hits:
-        lines = [f"**Live News — Real-time results for:** _{query}_\n", "---"]
+        lines = [f"**Live News — हाल की खबरें ({query}):**\n", "---"]
         for i, it in enumerate(hits, 1):
             lines.append(f"**{i}. {it['title']}**")
             if it["description"]:
@@ -224,32 +255,36 @@ def _news_response(query: str) -> dict:
             if it["pub_date"]:
                 lines.append(f"*{it['source']} · {it['pub_date']}*")
             lines.append("")
-        lines += ["---",
-                  "*Production mein yahi query 14 lakh+ MySQL records se answer dega.*"]
+        lines += [
+            "---",
+            "*यह live news feed से है। Production mein यही query 14 लाख+ "
+            "MySQL social media records से answer देगा।*",
+        ]
         return {
             "answer": "\n".join(lines),
             "confidence": 0.68,
             "evidence_count": len(hits),
-            "sources": list({it["source"] for it in hits}) or ["Google News"],
+            "sources": list({it["source"] for it in hits}),
             "latency_ms": 1100,
         }
 
+    # All RSS sources failed — show a graceful message
     return {
         "answer": (
             f'**Query:** "{query}"\n\n'
-            "Live news search kiya gaya, is topic par abhi koi UP-specific news nahi mili.\n\n"
-            "**Demo mein ye topics available hain:**\n"
-            "• **Smart meter** — Smart Meter Agitation overview\n"
-            "• **Agra** — Kagrawl FIR detail\n"
-            "• **Lucknow** — Shakti Bhavan gherao\n"
-            "• **Sentiment** — 87.3% negative analysis\n"
+            "Live news feed abhi available nahi hai (network timeout).\n\n"
+            "**Demo ke liye ye queries try karein:**\n"
+            "• **Smart meter** — 773 posts, 32 districts\n"
+            "• **Agra** — Kagrawl FIR, 500+ villagers\n"
+            "• **Lucknow** — Shakti Bhavan AAP gherao\n"
+            "• **Sentiment** — 87.3% negative, viral slogans\n"
             "• **AAP** — Coordinated campaign analysis\n\n"
-            "*Production mein 14 lakh+ real records se jawab milega.*"
+            "*Production mein real MySQL database se instant answer milega.*"
         ),
         "confidence": 0.3,
         "evidence_count": 0,
         "sources": ["Demo Mode"],
-        "latency_ms": 400,
+        "latency_ms": 300,
     }
 
 
