@@ -224,24 +224,31 @@ async def serve_chat():
     index = _dedicated / "index.html"
     if index.exists():
         content = index.read_text()
-        content = content.replace('href="app.css"', 'href="/static/app/app.css"')
-        content = content.replace('src="app.js"',   'src="/static/app/app.js"')
-        # Inject demo answers — JS uses these directly, no network call needed
+        # Fix static paths
+        ts = int(time.time())  # cache-buster so browser never loads stale app.js
+        content = content.replace('href="app.css"', f'href="/static/app/app.css?v={ts}"')
+        content = content.replace('src="app.js"',   f'src="/static/app/app.js?v={ts}"')
+        # Inject demo config — sets DEMO_ANSWERS (new app.js) + PHQ_API_BASE (fallback)
         answers_json = json.dumps({k: {
             "answer": v["answer"], "confidence": v["confidence"],
             "evidence_count": v["evidence_count"], "sources": v["sources"],
             "latency_ms": v["latency_ms"],
-        } for k, v in MOCK_ANSWERS.items()})
-        content = content.replace('</head>',
-            f'<script>window.DEMO_ANSWERS={answers_json};</script></head>')
+        } for k, v in MOCK_ANSWERS.items()}, ensure_ascii=False)
+        inject = (
+            f'<script>'
+            f'window.PHQ_API_BASE="http://localhost:8000";'
+            f'window.DEMO_ANSWERS={answers_json};'
+            f'</script>'
+        )
+        content = content.replace('</head>', inject + '</head>')
         banner = (
             '<div style="background:#d97706;color:#fff;text-align:center;'
             'padding:7px 12px;font-size:12.5px;font-weight:500;">'
-            '🎯 DEMO MODE — Mock data from Smart Meter Agitation (Apr–May 2026). '
-            'Production will use live MySQL data.</div>'
+            '🎯 DEMO MODE — Smart Meter Agitation data (Apr–May 2026). '
+            'Production connects to live MySQL.</div>'
         )
         content = content.replace("<body>", f"<body>{banner}")
-        return HTMLResponse(content)
+        return HTMLResponse(content, headers={"Cache-Control": "no-store"})
     return HTMLResponse("<h2>Matrix AI Sahayak — Demo Mode</h2>"
                         "<p>Run from repo root: <code>./demo.sh</code></p>")
 
