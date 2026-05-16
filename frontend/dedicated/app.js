@@ -161,10 +161,16 @@ function startNewChat() {
       <div class="sample-queries">
         <div class="sample-label">Sample queries:</div>
         <div class="sample-grid">
-          <button class="sample-btn">Smart meter protest ke baare mein batao</button>
-          <button class="sample-btn">पिछले 30 दिनों में मथुरा में कौन से हादसे हुए?</button>
-          <button class="sample-btn">Agra mein kya situation hai law and order ki?</button>
-          <button class="sample-btn">AAP ka role kya hai smart meter protest mein?</button>
+          <button class="sample-btn">Smart meter protest ka current status kya hai?</button>
+          <button class="sample-btn">मथुरा में पिछले 30 दिनों की law &amp; order situation?</button>
+          <button class="sample-btn">Varanasi mein social media pe kya trend kar raha hai?</button>
+          <button class="sample-btn">Kawad Yatra 2026 ki preparation aur risk assessment?</button>
+          <button class="sample-btn">Kanpur mein koi protest ya agitation chal rahi hai?</button>
+          <button class="sample-btn">अयोध्या में tourist-related कोई incident हुई?</button>
+          <button class="sample-btn">AAP ka UP mein social media campaign kaise chal raha hai?</button>
+          <button class="sample-btn">UP mein active protests ka dashboard dikhao</button>
+          <button class="sample-btn">Agra mein smart meter FIR waale case ka update?</button>
+          <button class="sample-btn">गोरखपुर में हाल की सोशल मीडिया गतिविधि?</button>
         </div>
       </div>
     </div>`;

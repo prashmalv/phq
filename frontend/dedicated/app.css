@@ -153,14 +153,14 @@ body {
 
 /* ── Welcome screen ──────────────────────────────── */
 .welcome {
-  margin: auto; max-width: 620px; text-align: center;
-  padding: 40px 20px;
+  margin: auto; max-width: 720px; text-align: center;
+  padding: 32px 20px;
 }
 .welcome-icon { font-size: 52px; margin-bottom: 18px; }
 .welcome-title { font-size: 32px; font-weight: 700; color: var(--text-1); margin-bottom: 12px; }
 .welcome-sub { color: var(--text-2); font-size: 17px; line-height: 1.7; margin-bottom: 36px; }
 .sample-label { font-size: 13px; color: var(--text-3); margin-bottom: 12px; font-weight: 500; }
-.sample-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; }
+.sample-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; max-height: 420px; overflow-y: auto; }
 .sample-btn {
   background: var(--bg-elevated); border: 1px solid var(--border);
   color: var(--text-2); border-radius: var(--radius);

@@ -148,6 +148,232 @@ Note: यह Coordinated Political Campaign है, Coordinated Inauthentic Beha
         "district_detected": None,
         "latency_ms": 1090,
     },
+
+    "mathura": {
+        "answer": """**मथुरा जिला — Social Media Intelligence (पिछले 30 दिन)**
+
+**कुल पोस्ट:** 312 | मुख्य Platform: Twitter/X (78%), Facebook (18%)
+
+**प्रमुख Topics:**
+- शाही ईदगाह legal proceedings update — 45 posts (largely informational, no inflammatory content)
+- Kawad Yatra route preparation — positive coordination posts, 67 mentions
+- Braj Mandal Parikrama security — 38 posts, सकारात्मक
+
+**Sentiment Distribution:**
+| Sentiment | Posts | % |
+|-----------|-------|---|
+| Positive (भक्ति/धार्मिक) | 194 | 62.2% |
+| Neutral | 87 | 27.9% |
+| Negative | 31 | 9.9% |
+
+**Law & Order:** कोई major incident नहीं। Yatra season approaching — monitoring बढ़ाएं।
+**Alert Level:** 🟡 Medium — Elevated monitoring during religious events recommended""",
+        "confidence": 0.83,
+        "evidence_count": 9,
+        "sources": ["Twitter", "Facebook"],
+        "latency_ms": 960,
+    },
+
+    "varanasi": {
+        "answer": """**वाराणसी जिला — Social Media Intelligence (पिछले 30 दिन)**
+
+**कुल पोस्ट:** 478 | Kashi Vishwanath Corridor impact — sustained high activity
+
+**Positive Trends:**
+- International tourists से Ghat experience posts — 142 posts, viral reach
+- CM Office Kashi event announcements — 89 shares, positive
+- Dev Deepawali preparation — early coordination posts increasing
+
+**Monitoring Points:**
+- Dashashwamedh area traffic disruption — 31 posts (crowd management)
+- Boat घाट dispute (minor) — 18 posts, local, resolved
+- ₹400 prasad scam viral claim — 24 posts, fact-check needed ★
+
+**Platform-wise:**
+- Twitter: 52% | Instagram: 28% | Facebook: 20%
+
+**Sentiment:** 71% positive, 22% neutral, 7% negative (logistics only)
+**Alert Level:** 🟢 Normal — Tourism volume high, no L&O concerns""",
+        "confidence": 0.87,
+        "evidence_count": 11,
+        "sources": ["Twitter", "Instagram", "Facebook"],
+        "latency_ms": 1020,
+    },
+
+    "kanpur": {
+        "answer": """**कानपुर जिला — Social Media Intelligence (पिछले 15 दिन)**
+
+**कुल पोस्ट:** 241
+
+**⚠️ Watch: Labour Unrest — Panki Industrial Area**
+- 67 posts: Textile unit workers — delayed salary payments
+- Key handles: @KanpurMazdoorSangh (8.2K followers)
+- Sentiment: Angry but non-violent; potential for escalation
+
+**Smart Meter Connection:**
+- 72 Kanpur posts linked to UP Smart Meter agitation
+- AAP handles coordinating from Kanpur — @VikasKanpurAAP active
+
+**Communal Harmony:**
+- No inflammatory content detected (7-day scan)
+- Inter-community Iftar/events covered positively
+
+**Sentiment:** 61% negative (economic), 32% neutral, 7% positive
+**Recommendations:**
+- Monitor Panki area for wage-related escalation
+- Watch AAP coordination ahead of potential Kanpur rally""",
+        "confidence": 0.80,
+        "evidence_count": 10,
+        "sources": ["Twitter", "Facebook", "Official Report"],
+        "latency_ms": 1100,
+    },
+
+    "kawad": {
+        "answer": """**Kawad Yatra 2026 — Pre-Event Social Media Analysis**
+
+**यात्रा Period:** July 2026 (expected) | **Monitoring Start:** Now
+
+**Current Social Media Activity (1,240 posts, last 7 days):**
+- Hashtags trending: #KawadYatra2026, #BolBam, #Haridwar
+- Devotee groups organizing — Meerut, Muzaffarnagar, Hapur corridors
+
+**Route Risk Assessment:**
+| District | Activity | Risk |
+|----------|----------|------|
+| Meerut | 312 posts | 🟡 Medium |
+| Muzaffarnagar | 198 posts | 🟡 Medium |
+| Hapur | 145 posts | 🟢 Low |
+| Bulandshahr | 89 posts | 🟢 Low |
+
+**Historical Context:** 2024 mein Muzaffarnagar bypass pe minor crowd incident — social media coordination gap था।
+
+**Recommendations:**
+- Deploy real-time social media monitoring along route
+- Pre-position forces at high-activity nodes
+- Counter-narrative readiness for misinformation
+
+**Sentiment:** 78% positive (devotion), 15% neutral, 7% concern (crowd/traffic)""",
+        "confidence": 0.88,
+        "evidence_count": 14,
+        "sources": ["Twitter", "Facebook", "WhatsApp Intel"],
+        "latency_ms": 1250,
+    },
+
+    "ayodhya": {
+        "answer": """**अयोध्या जिला — Social Media Intelligence (पिछले 7 दिन)**
+
+**Ram Mandir Post-Inauguration — Ongoing High Activity**
+
+**Visitor Volume Impact:**
+- 3,450+ posts | 2.8 lakh+ daily visitors
+- Instagram reels from Mandir — 1.2M+ cumulative views this week
+
+**Minor Concerns (Non-L&O):**
+- Hotel/accommodation scarcity complaints — 89 posts
+- Prasadam queue wait time complaints — 67 posts
+- Parking/traffic near Sarayu Ghat — 44 posts (local issue)
+
+**Political Activity:**
+- Opposition posts on "commercialization" — 34 posts, minimal traction
+- No inflammatory content detected
+
+**Upcoming Monitoring:**
+- Ram Navami preparation posts starting — crowd surge expected
+- VIP visit rumors circulating — verification needed
+
+**Sentiment:** 84% positive, 14% neutral, 2% negative (logistics only)
+**Alert Level:** 🟢 Normal — High tourism, zero security concerns""",
+        "confidence": 0.91,
+        "evidence_count": 16,
+        "sources": ["Twitter", "Instagram", "Facebook"],
+        "latency_ms": 980,
+    },
+
+    "gorakhpur": {
+        "answer": """**गोरखपुर जिला — Social Media Intelligence (पिछले 15 दिन)**
+
+**कुल पोस्ट:** 189 | CM का गृह जिला — always elevated monitoring
+
+**Key Narratives:**
+- CM Yogi health facility launch — 78 posts, positive coverage
+- Gorakhpur-Lucknow Expressway inauguration post — 45 shares
+- Gorakhnath Temple events — 34 posts, peaceful
+
+**⚠️ Emerging Issue:**
+- Industrial area noise pollution complaints — 23 posts, local residents
+- Ramgarh Tal development delay posts — 19 posts, frustration visible
+
+**Anti-Establishment Posts:**
+- 31 posts criticizing municipal administration (garbage, roads)
+- Handled by @GorakhpurMayor account — responsive, contained
+
+**Sentiment:** 58% positive (CM coverage), 27% neutral, 15% negative (local admin)
+**Alert Level:** 🟢 Normal""",
+        "confidence": 0.79,
+        "evidence_count": 8,
+        "sources": ["Twitter", "Facebook"],
+        "latency_ms": 890,
+    },
+
+    "meerut": {
+        "answer": """**मेरठ जिला — Social Media Intelligence (पिछले 15 दिन)**
+
+**कुल पोस्ट:** 267 | Western UP hub — sensitive district
+
+**Kawad Yatra Corridor:**
+- 145 posts about route preparation — mostly coordination
+- NH-58 diversion announcement — mixed response (67 negative from truck drivers)
+
+**⚠️ Watch: Communal Harmony Monitor**
+- 18 posts with communal undertone detected (last 7 days)
+- Source: 3 accounts with <500 followers, low reach
+- Content: Isolated, not coordinated — standard monitoring sufficient
+
+**Economic Issues:**
+- Sports goods industry slowdown posts — 34 posts
+- Worker welfare demands — 23 posts, peaceful
+
+**Positive:**
+- Inter-community cricket tournament — viral positive content
+
+**Sentiment:** 52% neutral, 31% negative (traffic/economy), 17% positive
+**Alert Level:** 🟡 Medium — Kawad corridor + communal watch""",
+        "confidence": 0.81,
+        "evidence_count": 11,
+        "sources": ["Twitter", "Facebook", "Official Report"],
+        "latency_ms": 1080,
+    },
+
+    "protest": {
+        "answer": """**UP — Active Protest Monitoring Dashboard (May 2026)**
+
+**Currently Active Agitations:**
+
+| Issue | Districts | Posts | Intensity |
+|-------|-----------|-------|-----------|
+| Smart Meter | 32 districts | 773 | 🔴 High |
+| Labour (Kanpur textile) | Kanpur | 67 | 🟡 Medium |
+| Agricultural land acquisition | Mathura, Agra | 45 | 🟡 Medium |
+| Road condition | Gorakhpur, Meerut | 38 | 🟢 Low |
+
+**Trending Hashtags (Last 48 Hours):**
+- #SmartMeterVirodh — 445 tweets
+- #UPBijliScam — 312 tweets
+- #KisanAdhikar — 89 tweets
+
+**Key Risk Districts:** Agra, Lucknow, Firozabad, Kanpur
+
+**Political Amplification:**
+- AAP: 194 posts (25.1% of Smart Meter content)
+- SP handles: 67 posts
+- BJP counter-narrative: 34 posts
+
+**Recommendation:** Agra FIR on 500+ villagers continues to fuel negative narrative — consider partial withdrawal or communication strategy.""",
+        "confidence": 0.86,
+        "evidence_count": 13,
+        "sources": ["Twitter", "Facebook", "Official Report"],
+        "latency_ms": 1180,
+    },
 }
 
 # ─── Live news fetcher ────────────────────────────────────────────────────────
@@ -228,26 +454,59 @@ def _fetch_up_news() -> list[dict]:
     return _news_cache["items"]
 
 
+_UP_CITIES = [
+    "lucknow", "agra", "varanasi", "kanpur", "mathura", "meerut", "noida",
+    "ghaziabad", "allahabad", "prayagraj", "gorakhpur", "bareilly", "aligarh",
+    "moradabad", "firozabad", "ayodhya", "faizabad", "muzaffarnagar", "hapur",
+    "bulandshahr", "etah", "mainpuri", "jhansi", "banda",
+]
+
+_TOPIC_KEYWORDS = {
+    "protest": ["protest", "agitation", "demonstration", "dharna", "virodh", "andolan"],
+    "crime":   ["crime", "murder", "robbery", "theft", "fir", "arrest", "accused"],
+    "communal":["communal", "riot", "tension", "violence", "hindu", "muslim", "church"],
+    "traffic": ["traffic", "jam", "accident", "highway", "road", "expressway"],
+    "political":["election", "bjp", "sp", "bsp", "aap", "congress", "rally", "campaign"],
+    "law":     ["law", "order", "police", "encounter", "security", "deployment"],
+}
+
+
 def _news_response(query: str) -> dict:
     all_news = _fetch_up_news()
-    q_words = {w.lower() for w in query.split() if len(w) > 3}
+    q = query.lower()
 
-    # Score each article by keyword overlap with the query
-    scored = []
-    for item in all_news:
+    # Extract city and topic signals from query
+    detected_cities  = [c for c in _UP_CITIES if c in q]
+    detected_topics  = [t for t, kws in _TOPIC_KEYWORDS.items() if any(k in q for k in kws)]
+    q_words = {w for w in q.split() if len(w) > 3}
+
+    def _score(item: dict) -> int:
         text = (item["title"] + " " + item["description"]).lower()
-        score = sum(1 for w in q_words if w in text)
-        if score > 0:
-            scored.append((score, item))
-    scored.sort(key=lambda x: -x[0])
-    hits = [it for _, it in scored[:5]]
+        score = 0
+        # City match → strong signal
+        score += sum(3 for c in detected_cities if c in text)
+        # Topic match → medium signal
+        score += sum(2 for t in detected_topics
+                     for kw in _TOPIC_KEYWORDS[t] if kw in text)
+        # Generic word overlap
+        score += sum(1 for w in q_words if w in text)
+        return score
 
-    # If no keyword match, just show recent UP news as context
+    scored = [(it, _score(it)) for it in all_news]
+    scored.sort(key=lambda x: -x[1])
+    hits = [it for it, sc in scored if sc > 0][:5]
+
+    # Fallback: if nothing matched, show recent UP news anyway
     if not hits and all_news:
         hits = all_news[:4]
 
     if hits:
-        lines = [f"**Live News — हाल की खबरें ({query}):**\n", "---"]
+        city_str  = " / ".join(c.title() for c in detected_cities) if detected_cities else "Uttar Pradesh"
+        topic_str = " + ".join(detected_topics) if detected_topics else "general"
+        lines = [
+            f"**Live News — {city_str} ({topic_str}) — हाल की खबरें:**\n",
+            "---",
+        ]
         for i, it in enumerate(hits, 1):
             lines.append(f"**{i}. {it['title']}**")
             if it["description"]:
@@ -257,29 +516,27 @@ def _news_response(query: str) -> dict:
             lines.append("")
         lines += [
             "---",
-            "*यह live news feed से है। Production mein यही query 14 लाख+ "
-            "MySQL social media records से answer देगा।*",
+            f"*Query context detected: city={city_str}, topic={topic_str}. "
+            "Production mein यही query 14 लाख+ MySQL social media records से "
+            "match होकर detailed intelligence देगा।*",
         ]
         return {
             "answer": "\n".join(lines),
-            "confidence": 0.68,
+            "confidence": 0.70,
             "evidence_count": len(hits),
             "sources": list({it["source"] for it in hits}),
-            "latency_ms": 1100,
+            "latency_ms": 1200,
         }
 
-    # All RSS sources failed — show a graceful message
     return {
         "answer": (
             f'**Query:** "{query}"\n\n'
-            "Live news feed abhi available nahi hai (network timeout).\n\n"
+            "Live news feed abhi available nahi hai।\n\n"
             "**Demo ke liye ye queries try karein:**\n"
-            "• **Smart meter** — 773 posts, 32 districts\n"
-            "• **Agra** — Kagrawl FIR, 500+ villagers\n"
-            "• **Lucknow** — Shakti Bhavan AAP gherao\n"
-            "• **Sentiment** — 87.3% negative, viral slogans\n"
-            "• **AAP** — Coordinated campaign analysis\n\n"
-            "*Production mein real MySQL database se instant answer milega.*"
+            "• Smart meter protest, Agra, Lucknow, Mathura, Varanasi\n"
+            "• Kanpur, Gorakhpur, Meerut, Ayodhya, Kawad Yatra\n"
+            "• Sentiment analysis, Protest dashboard, AAP campaign\n\n"
+            "*Production mein 14 lakh+ real records se instant answer milega।*"
         ),
         "confidence": 0.3,
         "evidence_count": 0,
