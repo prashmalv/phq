@@ -26,6 +26,30 @@
         <div class="sessions-empty">No conversations yet</div>
       </div>
 
+      <!-- Live stream panel -->
+      <div class="live-section">
+        <div class="live-header" id="liveToggle">
+          <span>📺 Live UP News</span>
+          <span class="live-chevron" id="liveChevron">▲</span>
+        </div>
+        <div class="live-body" id="liveBody">
+          <select class="live-channel-select" id="liveChannelSelect">
+            <option value="UCRWFSbif-RFENbBrSiez1DA">UP Tak</option>
+            <option value="UCDESpUxd0MEDum-k1_0nuwA">ABP Ganga</option>
+            <option value="UCmphdqZNmqL72WJ2uyiNw5w">News18 UP/Uttarakhand</option>
+          </select>
+          <div class="live-embed-wrap">
+            <iframe id="liveFrame"
+              src="about:blank"
+              frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen>
+            </iframe>
+          </div>
+          <div class="live-hint">🔇 Muted · Click iframe to unmute</div>
+        </div>
+      </div>
+
       <!-- Trending panel -->
       <div class="trending-section">
         <div class="trending-header">

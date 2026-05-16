@@ -62,6 +62,7 @@ function bindEvents() {
   if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
 
   initTrending();
+  initLiveStream();
 }
 
 function bindSampleBtns() {
@@ -359,6 +360,39 @@ function setLoading(state) {
 
 function removeTypingIndicator() {
   messagesArea.querySelector('.typing-indicator')?.remove();
+}
+
+// ─── Live stream panel ────────────────────────────────────────────────────────
+function initLiveStream() {
+  const toggle   = document.getElementById('liveToggle');
+  const body     = document.getElementById('liveBody');
+  const chevron  = document.getElementById('liveChevron');
+  const frame    = document.getElementById('liveFrame');
+  const select   = document.getElementById('liveChannelSelect');
+  if (!toggle || !body || !frame) return;
+
+  let open = false;
+
+  function setChannel(channelId) {
+    frame.src = `https://www.youtube.com/embed/live_stream?channel=${channelId}&autoplay=1&mute=1`;
+  }
+
+  toggle.addEventListener('click', () => {
+    open = !open;
+    body.classList.toggle('open', open);
+    chevron.classList.toggle('open', open);
+    if (open && frame.src === 'about:blank') {
+      setChannel(select.value);
+    }
+    if (!open) {
+      // Stop playback when collapsed (avoids audio continuing in background)
+      frame.src = 'about:blank';
+    }
+  });
+
+  select.addEventListener('change', () => {
+    if (open) setChannel(select.value);
+  });
 }
 
 // ─── Trending panel ───────────────────────────────────────────────────────────
