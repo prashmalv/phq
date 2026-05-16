@@ -10,11 +10,14 @@ Usage:
 """
 import json
 import os
+import re as _re
 import sys
 import threading
 import time
+import urllib.request
 import uuid
 import webbrowser
+import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 
@@ -147,6 +150,109 @@ Note: यह Coordinated Political Campaign है, Coordinated Inauthentic Beha
     },
 }
 
+# ─── Live news fetcher (Google News RSS — no API key needed) ──────────────────
+
+_news_cache: dict = {"items": [], "fetched_at": None}
+_NEWS_TTL = 1800  # 30 minutes
+
+
+def _strip_html(text: str) -> str:
+    return _re.sub(r"<[^>]+>", "", text or "").strip()
+
+
+def _fetch_up_news() -> list[dict]:
+    now = datetime.utcnow()
+    if (
+        _news_cache["fetched_at"]
+        and (now - _news_cache["fetched_at"]).seconds < _NEWS_TTL
+        and _news_cache["items"]
+    ):
+        return _news_cache["items"]
+
+    queries = [
+        "uttar pradesh police law order",
+        "UP social media agitation protest",
+        "Lucknow Agra Varanasi Kanpur incident crime",
+    ]
+    items: list[dict] = []
+    for q in queries:
+        try:
+            url = (
+                "https://news.google.com/rss/search?q="
+                + q.replace(" ", "+")
+                + "&hl=en-IN&gl=IN&ceid=IN:en"
+            )
+            req = urllib.request.Request(
+                url, headers={"User-Agent": "Mozilla/5.0 (PHQ-Demo)"}
+            )
+            with urllib.request.urlopen(req, timeout=7) as resp:
+                root = ET.fromstring(resp.read())
+            for item in root.findall(".//item")[:5]:
+                title = _strip_html(item.findtext("title", ""))
+                desc  = _strip_html(item.findtext("description", ""))[:280]
+                pub   = (item.findtext("pubDate", "") or "")[:22]
+                src   = _strip_html(item.findtext("source", "") or "Google News")
+                if title:
+                    items.append({"title": title, "description": desc,
+                                  "pub_date": pub, "source": src})
+        except Exception as e:
+            print(f"  [news] {q[:30]}… → {e}")
+
+    _news_cache["items"] = items[:15]
+    _news_cache["fetched_at"] = now
+    return _news_cache["items"]
+
+
+def _news_response(query: str) -> dict:
+    all_news = _fetch_up_news()
+    q_words = {w.lower() for w in query.split() if len(w) > 3}
+    scored = []
+    for item in all_news:
+        text = (item["title"] + " " + item["description"]).lower()
+        score = sum(1 for w in q_words if w in text)
+        if score > 0:
+            scored.append((score, item))
+    scored.sort(key=lambda x: -x[0])
+    hits = [it for _, it in scored[:5]]
+
+    if hits:
+        lines = [f"**Live News — Real-time results for:** _{query}_\n", "---"]
+        for i, it in enumerate(hits, 1):
+            lines.append(f"**{i}. {it['title']}**")
+            if it["description"]:
+                lines.append(it["description"])
+            if it["pub_date"]:
+                lines.append(f"*{it['source']} · {it['pub_date']}*")
+            lines.append("")
+        lines += ["---",
+                  "*Production mein yahi query 14 lakh+ MySQL records se answer dega.*"]
+        return {
+            "answer": "\n".join(lines),
+            "confidence": 0.68,
+            "evidence_count": len(hits),
+            "sources": list({it["source"] for it in hits}) or ["Google News"],
+            "latency_ms": 1100,
+        }
+
+    return {
+        "answer": (
+            f'**Query:** "{query}"\n\n'
+            "Live news search kiya gaya, is topic par abhi koi UP-specific news nahi mili.\n\n"
+            "**Demo mein ye topics available hain:**\n"
+            "• **Smart meter** — Smart Meter Agitation overview\n"
+            "• **Agra** — Kagrawl FIR detail\n"
+            "• **Lucknow** — Shakti Bhavan gherao\n"
+            "• **Sentiment** — 87.3% negative analysis\n"
+            "• **AAP** — Coordinated campaign analysis\n\n"
+            "*Production mein 14 lakh+ real records se jawab milega.*"
+        ),
+        "confidence": 0.3,
+        "evidence_count": 0,
+        "sources": ["Demo Mode"],
+        "latency_ms": 400,
+    }
+
+
 # ─── In-memory session store ───────────────────────────────────────────────────
 # { session_id: { "title": str, "messages": [...], "updated_at": str } }
 _sessions: dict = {}
@@ -194,28 +300,12 @@ if _logo.exists():
     app.mount("/static/logo", StaticFiles(directory=str(_logo)), name="logo")
 
 
-def _match_query(query: str) -> dict:
+def _match_query(query: str) -> dict | None:
     q = query.lower()
     for keyword, response in MOCK_ANSWERS.items():
         if keyword in q:
             return response
-    return {
-        "answer": f"""**Query:** "{query}"
-
-यह demo में {len(MOCK_ANSWERS)} sample topics cover हैं:
-• Smart Meter protest की जानकारी
-• Agra जिले की situation
-• Lucknow में protest
-• Sentiment analysis
-• AAP की भूमिका
-
-इन topics पर कोई भी question पूछें। Production में यह bot 14 लाख+ real social media records से answer देगा।""",
-        "confidence": 0.5,
-        "evidence_count": 0,
-        "sources": ["Demo Mode"],
-        "district_detected": None,
-        "latency_ms": 200,
-    }
+    return None  # caller should fall back to live news
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -235,10 +325,11 @@ async def serve_chat():
             "latency_ms": v["latency_ms"],
         } for k, v in MOCK_ANSWERS.items()}, ensure_ascii=False)
         inject = (
-            f'<script>'
-            f'window.PHQ_API_BASE="http://localhost:8000";'
+            '<script>'
+            # Always point to same origin — works on localhost AND Railway/Render
+            'window.PHQ_API_BASE=window.location.origin;'
             f'window.DEMO_ANSWERS={answers_json};'
-            f'</script>'
+            '</script>'
         )
         content = content.replace('</head>', inject + '</head>')
         banner = (
@@ -258,16 +349,19 @@ async def chat_query(
     request: dict,
     authorization: str = Header(default="Bearer demo"),
 ):
+    import asyncio
     query = request.get("query", "")
     session_id = request.get("session_id") or None
 
-    # Create new session only if no valid existing session sent
     if not session_id or session_id not in _sessions:
         session_id = _make_session_id()
 
+    # Known topic → instant static answer; unknown → live news fetch
     response = _match_query(query)
-    _store_turn(session_id, query, response)
+    if response is None:
+        response = await asyncio.to_thread(_news_response, query)
 
+    _store_turn(session_id, query, response)
     return {"session_id": session_id, **response}
 
 
@@ -391,7 +485,8 @@ DEMO report — Production system generates this automatically from live MySQL d
 # ─── Entry point ──────────────────────────────────────────────────────────────
 
 def main():
-    port = 8000
+    port = int(os.environ.get("PORT", 8000))
+    is_local = port == 8000
     print("\n" + "="*60)
     print("  Matrix AI Sahayak — DEMO MODE")
     print("="*60)
@@ -407,11 +502,12 @@ def main():
     print("\n  Press Ctrl+C to stop")
     print("="*60 + "\n")
 
-    def open_browser():
-        time.sleep(1.5)
-        webbrowser.open(f"http://localhost:{port}")
+    if is_local:
+        def open_browser():
+            time.sleep(1.5)
+            webbrowser.open(f"http://localhost:{port}")
+        threading.Thread(target=open_browser, daemon=True).start()
 
-    threading.Thread(target=open_browser, daemon=True).start()
     uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")
 
 

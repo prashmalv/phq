@@ -152,7 +152,7 @@ function startNewChat() {
   currentSessionId = null;
   messagesArea.innerHTML = `
     <div class="welcome" id="welcomeScreen">
-      <div class="welcome-icon">🛡️</div>
+      <img src="/static/logo/UP_police_logo.jpg" alt="UP Police" class="welcome-logo" />
       <h2 class="welcome-title">Matrix AI Sahayak</h2>
       <p class="welcome-sub">
         Ask questions in <strong>Hindi or English</strong> about incidents,
@@ -181,13 +181,7 @@ function _matchDemo(query) {
   for (const [keyword, response] of Object.entries(answers)) {
     if (q.includes(keyword)) return response;
   }
-  return {
-    answer: `**Query received:** "${query}"\n\nDemo mein ye 5 topics available hain:\n• **Smart meter** — Smart Meter Agitation overview\n• **Agra** — Kagrawl FIR, 500+ villagers\n• **Lucknow** — Shakti Bhavan gherao (AAP)\n• **Sentiment** — 87.3% negative, viral slogans\n• **AAP** — Coordinated political campaign analysis\n\nIn topics pe Hindi ya English mein poochein. Production mein 14 lakh+ real records se answer milega.`,
-    confidence: 0.5,
-    evidence_count: 0,
-    sources: ['Demo Mode'],
-    latency_ms: 200,
-  };
+  return null; // unknown query → server will fetch live news
 }
 
 function _demoStoreTurn(sessionId, query, response) {
@@ -221,12 +215,23 @@ async function handleSend() {
     let data;
 
     if (DEMO_MODE) {
-      // No network call — use injected answers with fake latency
-      await new Promise(r => setTimeout(r, 700 + Math.random() * 600));
-      const resp = _matchDemo(text);
-      const sid = currentSessionId || ('demo-' + Math.random().toString(36).slice(2, 10));
-      _demoStoreTurn(sid, text, resp);
-      data = { session_id: sid, ...resp };
+      const localResp = _matchDemo(text);
+      if (localResp) {
+        // Known topic — respond instantly from injected data, no network call
+        await new Promise(r => setTimeout(r, 700 + Math.random() * 600));
+        const sid = currentSessionId || ('demo-' + Math.random().toString(36).slice(2, 10));
+        _demoStoreTurn(sid, text, localResp);
+        data = { session_id: sid, ...localResp };
+      } else {
+        // Unknown query — fetch live news from demo server
+        const res = await apiFetch('/api/v2/chat/query', {
+          method: 'POST',
+          body: JSON.stringify({ query: text, session_id: currentSessionId }),
+        });
+        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || `HTTP ${res.status}`); }
+        data = await res.json();
+        if (data.session_id) _demoStoreTurn(data.session_id, text, data);
+      }
     } else {
       const res = await apiFetch('/api/v2/chat/query', {
         method: 'POST',
