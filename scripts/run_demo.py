@@ -184,11 +184,14 @@ def _store_turn(session_id: str, query: str, response: dict):
 app = FastAPI(title="Matrix AI Sahayak — Demo Mode", docs_url="/api/docs")
 
 _dedicated = ROOT / "frontend" / "dedicated"
-_widget = ROOT / "frontend" / "widget"
+_widget    = ROOT / "frontend" / "widget"
+_logo      = ROOT / "frontend" / "logo"
 if _dedicated.exists():
     app.mount("/static/app", StaticFiles(directory=str(_dedicated)), name="app")
 if _widget.exists():
     app.mount("/static/widget", StaticFiles(directory=str(_widget)), name="widget")
+if _logo.exists():
+    app.mount("/static/logo", StaticFiles(directory=str(_logo)), name="logo")
 
 
 def _match_query(query: str) -> dict:
@@ -223,8 +226,14 @@ async def serve_chat():
         content = index.read_text()
         content = content.replace('href="app.css"', 'href="/static/app/app.css"')
         content = content.replace('src="app.js"',   'src="/static/app/app.js"')
-        # Override API_BASE to same origin (avoids hitting production server)
-        content = content.replace('</head>', '<script>window.PHQ_API_BASE="";</script></head>')
+        # Inject demo answers — JS uses these directly, no network call needed
+        answers_json = json.dumps({k: {
+            "answer": v["answer"], "confidence": v["confidence"],
+            "evidence_count": v["evidence_count"], "sources": v["sources"],
+            "latency_ms": v["latency_ms"],
+        } for k, v in MOCK_ANSWERS.items()})
+        content = content.replace('</head>',
+            f'<script>window.DEMO_ANSWERS={answers_json};</script></head>')
         banner = (
             '<div style="background:#d97706;color:#fff;text-align:center;'
             'padding:7px 12px;font-size:12.5px;font-weight:500;">'

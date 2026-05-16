@@ -21,7 +21,8 @@ from backend.reports.store import init_db as init_reports_db
 
 
 FRONTEND_DEDICATED = Path(__file__).parent.parent.parent / "frontend" / "dedicated"
-FRONTEND_WIDGET = Path(__file__).parent.parent.parent / "frontend" / "widget"
+FRONTEND_WIDGET    = Path(__file__).parent.parent.parent / "frontend" / "widget"
+FRONTEND_LOGO      = Path(__file__).parent.parent.parent / "frontend" / "logo"
 
 
 @asynccontextmanager
@@ -84,6 +85,9 @@ if FRONTEND_WIDGET.exists():
 
 if FRONTEND_DEDICATED.exists():
     app.mount("/static/app", StaticFiles(directory=str(FRONTEND_DEDICATED)), name="dedicated")
+
+if FRONTEND_LOGO.exists():
+    app.mount("/static/logo", StaticFiles(directory=str(FRONTEND_LOGO)), name="logo")
 
 
 # ─── Dedicated chat page (served at root) ────────────────────────────────────

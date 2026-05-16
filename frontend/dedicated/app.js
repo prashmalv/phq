@@ -1,13 +1,15 @@
 /**
- * PHQ Intelligence Bot — Dedicated Chat Page
- * Full GPT-like interface with session history.
+ * Matrix AI Sahayak — Dedicated Chat Page
  */
 'use strict';
 
-const API_BASE = window.PHQ_API_BASE || 'https://aibot.matrixupp.com';
+const API_BASE = (window.PHQ_API_BASE != null && window.PHQ_API_BASE !== '')
+  ? window.PHQ_API_BASE
+  : 'https://aibot.matrixupp.com';
+
+const DEMO_MODE = !!window.DEMO_ANSWERS;
 
 function getToken() {
-  // Matrix team: replace with however you store the JWT
   return localStorage.getItem('matrix_jwt')
     || sessionStorage.getItem('token')
     || sessionStorage.getItem('jwt')
@@ -17,6 +19,9 @@ function getToken() {
 // ─── State ────────────────────────────────────────────────────────────────────
 let currentSessionId = null;
 let loading = false;
+
+// In-memory store used only in DEMO_MODE
+const _demoSessions = {};
 
 // ─── DOM refs ─────────────────────────────────────────────────────────────────
 const messagesArea   = document.getElementById('messagesArea');
@@ -32,6 +37,7 @@ const chatTitle      = document.getElementById('chatTitle');
 document.addEventListener('DOMContentLoaded', () => {
   loadSessions();
   bindEvents();
+  initTheme();
 });
 
 function bindEvents() {
@@ -48,10 +54,15 @@ function bindEvents() {
   });
 
   newChatBtn.addEventListener('click', startNewChat);
-
   sidebarToggle.addEventListener('click', () => sidebar.classList.toggle('collapsed'));
 
-  // Sample query buttons
+  bindSampleBtns();
+
+  const themeBtn = document.getElementById('themeToggle');
+  if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
+}
+
+function bindSampleBtns() {
   document.querySelectorAll('.sample-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       queryInput.value = btn.textContent.trim();
@@ -61,13 +72,40 @@ function bindEvents() {
   });
 }
 
+// ─── Theme ────────────────────────────────────────────────────────────────────
+function initTheme() {
+  const saved = localStorage.getItem('matrix_theme') || 'dark';
+  applyTheme(saved);
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  localStorage.setItem('matrix_theme', next);
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+}
+
 // ─── Sessions ─────────────────────────────────────────────────────────────────
 async function loadSessions() {
+  if (DEMO_MODE) { _renderDemoSessions(); return; }
   try {
     const res = await apiFetch('/api/v2/chat/sessions');
     const sessions = await res.json();
     renderSessions(sessions);
-  } catch (_) { /* not logged in yet or no sessions */ }
+  } catch (_) {}
+}
+
+function _renderDemoSessions() {
+  const sessions = Object.entries(_demoSessions)
+    .map(([sid, s]) => ({ session_id: sid, title: s.title, updated_at: s.updated_at }))
+    .sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  renderSessions(sessions);
 }
 
 function renderSessions(sessions) {
@@ -91,27 +129,30 @@ async function loadSession(sessionId) {
   currentSessionId = sessionId;
   document.getElementById('welcomeScreen')?.remove();
 
-  try {
-    const res = await apiFetch(`/api/v2/chat/sessions/${sessionId}/messages`);
-    const messages = await res.json();
-    messagesArea.innerHTML = '';
-    messages.forEach(msg => appendMessage(msg.role, msg.content, msg.meta));
-    messagesArea.scrollTop = messagesArea.scrollHeight;
-
-    // Update active state in sidebar
-    document.querySelectorAll('.session-item').forEach(el => {
-      el.classList.toggle('active', el.dataset.id === sessionId);
-    });
-  } catch (e) {
-    console.error('Failed to load session:', e);
+  let messages = [];
+  if (DEMO_MODE) {
+    messages = (_demoSessions[sessionId]?.messages || []);
+  } else {
+    try {
+      const res = await apiFetch(`/api/v2/chat/sessions/${sessionId}/messages`);
+      messages = await res.json();
+    } catch (e) { console.error(e); return; }
   }
+
+  messagesArea.innerHTML = '';
+  messages.forEach(msg => appendMessage(msg.role, msg.content, msg.meta));
+  messagesArea.scrollTop = messagesArea.scrollHeight;
+
+  document.querySelectorAll('.session-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.id === sessionId);
+  });
 }
 
 function startNewChat() {
   currentSessionId = null;
   messagesArea.innerHTML = `
     <div class="welcome" id="welcomeScreen">
-      <div class="welcome-icon">🤖</div>
+      <div class="welcome-icon">🛡️</div>
       <h2 class="welcome-title">Matrix AI Sahayak</h2>
       <p class="welcome-sub">
         Ask questions in <strong>Hindi or English</strong> about incidents,
@@ -120,23 +161,48 @@ function startNewChat() {
       <div class="sample-queries">
         <div class="sample-label">Sample queries:</div>
         <div class="sample-grid">
-          <button class="sample-btn">Were there any violence incidents in Varanasi during Kawad Yatra in the last 5 years?</button>
+          <button class="sample-btn">Smart meter protest ke baare mein batao</button>
           <button class="sample-btn">पिछले 30 दिनों में मथुरा में कौन से हादसे हुए?</button>
-          <button class="sample-btn">What is public sentiment about the highway project in Lucknow?</button>
-          <button class="sample-btn">Was there a stampede in any UP temple due to social media misinformation?</button>
+          <button class="sample-btn">Agra mein kya situation hai law and order ki?</button>
+          <button class="sample-btn">AAP ka role kya hai smart meter protest mein?</button>
         </div>
       </div>
     </div>`;
-  document.querySelectorAll('.sample-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      queryInput.value = btn.textContent.trim();
-      sendBtn.disabled = false;
-      handleSend();
-    });
-  });
+  bindSampleBtns();
   document.querySelectorAll('.session-item').forEach(el => el.classList.remove('active'));
   chatTitle.textContent = 'Matrix AI Sahayak';
   queryInput.focus();
+}
+
+// ─── Demo mode helpers ────────────────────────────────────────────────────────
+function _matchDemo(query) {
+  const q = query.toLowerCase();
+  const answers = window.DEMO_ANSWERS || {};
+  for (const [keyword, response] of Object.entries(answers)) {
+    if (q.includes(keyword)) return response;
+  }
+  return {
+    answer: `**Query received:** "${query}"\n\nDemo mein ye 5 topics available hain:\n• **Smart meter** — Smart Meter Agitation overview\n• **Agra** — Kagrawl FIR, 500+ villagers\n• **Lucknow** — Shakti Bhavan gherao (AAP)\n• **Sentiment** — 87.3% negative, viral slogans\n• **AAP** — Coordinated political campaign analysis\n\nIn topics pe Hindi ya English mein poochein. Production mein 14 lakh+ real records se answer milega.`,
+    confidence: 0.5,
+    evidence_count: 0,
+    sources: ['Demo Mode'],
+    latency_ms: 200,
+  };
+}
+
+function _demoStoreTurn(sessionId, query, response) {
+  const now = new Date().toISOString();
+  if (!_demoSessions[sessionId]) {
+    _demoSessions[sessionId] = { title: query.slice(0, 60), messages: [], updated_at: now };
+  }
+  const sess = _demoSessions[sessionId];
+  sess.messages.push({ role: 'user', content: query, meta: null });
+  sess.messages.push({
+    role: 'assistant', content: response.answer,
+    meta: { confidence: response.confidence, evidence_count: response.evidence_count,
+            sources: response.sources, latency_ms: response.latency_ms },
+  });
+  sess.updated_at = new Date().toISOString();
 }
 
 // ─── Send message ─────────────────────────────────────────────────────────────
@@ -144,30 +210,36 @@ async function handleSend() {
   const text = queryInput.value.trim();
   if (!text || loading) return;
 
-  // Remove welcome screen on first message
   document.getElementById('welcomeScreen')?.remove();
-
   queryInput.value = '';
   queryInput.style.height = 'auto';
   sendBtn.disabled = true;
   setLoading(true);
-
   appendMessage('user', text);
 
   try {
-    const res = await apiFetch('/api/v2/chat/query', {
-      method: 'POST',
-      body: JSON.stringify({ query: text, session_id: currentSessionId }),
-    });
+    let data;
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || `HTTP ${res.status}`);
+    if (DEMO_MODE) {
+      // No network call — use injected answers with fake latency
+      await new Promise(r => setTimeout(r, 700 + Math.random() * 600));
+      const resp = _matchDemo(text);
+      const sid = currentSessionId || ('demo-' + Math.random().toString(36).slice(2, 10));
+      _demoStoreTurn(sid, text, resp);
+      data = { session_id: sid, ...resp };
+    } else {
+      const res = await apiFetch('/api/v2/chat/query', {
+        method: 'POST',
+        body: JSON.stringify({ query: text, session_id: currentSessionId }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `HTTP ${res.status}`);
+      }
+      data = await res.json();
     }
 
-    const data = await res.json();
     currentSessionId = data.session_id;
-
     removeTypingIndicator();
     appendMessage('assistant', data.answer, {
       confidence: data.confidence,
@@ -176,7 +248,6 @@ async function handleSend() {
       latency_ms: data.latency_ms,
     });
 
-    // Refresh session list & update title
     loadSessions();
     if (!chatTitle.textContent || chatTitle.textContent === 'Matrix AI Sahayak') {
       chatTitle.textContent = text.slice(0, 40) + (text.length > 40 ? '…' : '');
@@ -192,11 +263,9 @@ async function handleSend() {
 
 // ─── Markdown renderer ────────────────────────────────────────────────────────
 function renderMarkdown(text) {
-  // Escape HTML first
   let h = text
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-  // Tables: |col|col| rows (simple)
   h = h.replace(/(\|.+\|\n)+/g, (block) => {
     const rows = block.trim().split('\n').filter(r => !/^\|[-:| ]+\|$/.test(r));
     if (!rows.length) return block;
@@ -207,27 +276,16 @@ function renderMarkdown(text) {
     return `<table><thead>${toRow(head,'th')}</thead><tbody>${body.map(r=>toRow(r,'td')).join('')}</tbody></table>`;
   });
 
-  // Bold, italic, inline code
   h = h
     .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/`([^`\n]+)`/g, '<code>$1</code>');
 
-  // Headers (## or ###)
   h = h.replace(/^#{1,3} (.+)$/gm, '<span class="md-h">$1</span>');
-
-  // Horizontal rule
   h = h.replace(/^---+$/gm, '<hr class="md-sep">');
-
-  // Bullet lists (•, -, *)
-  h = h.replace(/^[•\-\*] (.+)$/gm,
-    '<div class="md-li"><span>•</span><span>$1</span></div>');
-  // Numbered lists
-  h = h.replace(/^(\d+)\. (.+)$/gm,
-    '<div class="md-li"><span>$1.</span><span>$2</span></div>');
-
-  // Newlines → breaks (but don't double-break after block elements)
+  h = h.replace(/^[•\-\*] (.+)$/gm, '<div class="md-li"><span>•</span><span>$1</span></div>');
+  h = h.replace(/^(\d+)\. (.+)$/gm, '<div class="md-li"><span>$1.</span><span>$2</span></div>');
   h = h.replace(/\n\n/g, '<br>').replace(/\n/g, '<br>');
 
   return h;
@@ -273,7 +331,7 @@ function setLoading(state) {
     const typing = document.createElement('div');
     typing.className = 'msg assistant typing-indicator';
     typing.innerHTML = `
-      <div class="avatar">🤖</div>
+      <div class="avatar">🛡️</div>
       <div class="bubble typing-bubble">
         <div class="typing-dots">
           <div class="typing-dot"></div>

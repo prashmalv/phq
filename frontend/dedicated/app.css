@@ -1,11 +1,11 @@
 /* ═══════════════════════════════════════════════════
-   PHQ Intelligence Bot — Modern Chat UI
-   Design: ChatGPT / Claude style dark theme
+   Matrix AI Sahayak — Chat UI (dark + light theme)
 ═══════════════════════════════════════════════════ */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-:root {
+/* ── Dark theme (default) ────────────────────────── */
+:root, [data-theme="dark"] {
   --bg:          #212121;
   --bg-sidebar:  #171717;
   --bg-elevated: #2f2f2f;
@@ -14,13 +14,34 @@
   --border:      rgba(255,255,255,.1);
   --text-1:      #ececec;
   --text-2:      #b4b4b4;
-  --text-3:      #666;
+  --text-3:      #777;
   --accent:      #2563eb;
   --accent-h:    #1d4ed8;
   --green:       #22c55e;
   --yellow:      #f59e0b;
   --red:         #ef4444;
   --radius:      12px;
+  --shadow:      0 2px 8px rgba(0,0,0,.4);
+}
+
+/* ── Light theme ─────────────────────────────────── */
+[data-theme="light"] {
+  --bg:          #f9f9f9;
+  --bg-sidebar:  #efefef;
+  --bg-elevated: #ffffff;
+  --bg-hover:    #e8e8e8;
+  --bg-active:   #dde8ff;
+  --border:      rgba(0,0,0,.1);
+  --text-1:      #1a1a1a;
+  --text-2:      #444;
+  --text-3:      #888;
+  --accent:      #2563eb;
+  --accent-h:    #1d4ed8;
+  --green:       #16a34a;
+  --yellow:      #d97706;
+  --red:         #dc2626;
+  --radius:      12px;
+  --shadow:      0 2px 8px rgba(0,0,0,.1);
 }
 
 html, body { height: 100%; }
@@ -52,14 +73,20 @@ body {
 
 .sidebar-header { padding: 14px 12px 10px; }
 .logo { display: flex; align-items: center; gap: 10px; padding: 6px 8px 12px; }
-.logo-icon {
-  width: 36px; height: 36px; border-radius: 9px;
-  background: linear-gradient(135deg, #1a56db, #7c3aed);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px; flex-shrink: 0;
+.logo-img {
+  width: 38px; height: 38px; border-radius: 8px;
+  object-fit: contain; flex-shrink: 0;
+  background: #fff; padding: 2px;
 }
 .logo-title { font-size: 13px; font-weight: 700; color: var(--text-1); line-height: 1.2; }
 .logo-sub   { font-size: 11px; color: var(--text-3); }
+
+/* Welcome logo */
+.welcome-logo {
+  width: 72px; height: 72px; object-fit: contain;
+  border-radius: 16px; background: #fff; padding: 6px;
+  margin-bottom: 16px; box-shadow: var(--shadow);
+}
 
 .new-chat-btn {
   width: 100%; background: var(--bg-elevated);
@@ -109,6 +136,12 @@ body {
 .sidebar-toggle:hover { color: var(--text-1); background: var(--bg-elevated); }
 .chat-header-title { font-size: 14px; font-weight: 600; color: var(--text-1); }
 .chat-header-meta  { font-size: 12px; color: var(--text-3); margin-left: auto; }
+.theme-toggle {
+  background: none; border: 1px solid var(--border); color: var(--text-3);
+  cursor: pointer; font-size: 15px; padding: 5px 8px;
+  border-radius: 7px; line-height: 1; transition: all .15s; flex-shrink: 0;
+}
+.theme-toggle:hover { color: var(--text-1); background: var(--bg-elevated); }
 
 /* ── Messages area ───────────────────────────────── */
 .messages-area {
