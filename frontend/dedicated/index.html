@@ -25,6 +25,23 @@
       <div class="sessions-list" id="sessionsList">
         <div class="sessions-empty">No conversations yet</div>
       </div>
+
+      <!-- Trending panel -->
+      <div class="trending-section">
+        <div class="trending-header">
+          <span>📡 Trending in UP</span>
+          <button class="trend-refresh" id="trendRefresh" title="Refresh">↻</button>
+        </div>
+        <div class="trending-tabs">
+          <button class="trend-tab active" data-city="up">UP</button>
+          <button class="trend-tab" data-city="lucknow">LKO</button>
+          <button class="trend-tab" data-city="varanasi">VNS</button>
+          <button class="trend-tab" data-city="gorakhpur">GKP</button>
+        </div>
+        <div class="trending-list" id="trendingList">
+          <div class="trend-loading">Loading…</div>
+        </div>
+      </div>
     </aside>
 
     <!-- Main -->

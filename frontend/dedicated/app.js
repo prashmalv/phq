@@ -60,6 +60,8 @@ function bindEvents() {
 
   const themeBtn = document.getElementById('themeToggle');
   if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
+
+  initTrending();
 }
 
 function bindSampleBtns() {
@@ -357,6 +359,56 @@ function setLoading(state) {
 
 function removeTypingIndicator() {
   messagesArea.querySelector('.typing-indicator')?.remove();
+}
+
+// ─── Trending panel ───────────────────────────────────────────────────────────
+let _trendCity = 'up';
+
+function initTrending() {
+  document.querySelectorAll('.trend-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.trend-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      _trendCity = btn.dataset.city;
+      loadTrending();
+    });
+  });
+  const refreshBtn = document.getElementById('trendRefresh');
+  if (refreshBtn) refreshBtn.addEventListener('click', loadTrending);
+
+  loadTrending();
+  setInterval(loadTrending, 15 * 60 * 1000);
+}
+
+async function loadTrending() {
+  const list = document.getElementById('trendingList');
+  if (!list) return;
+  list.innerHTML = '<div class="trend-loading">⟳ Loading…</div>';
+  try {
+    const res = await apiFetch(`/api/v2/trending?city=${_trendCity}`);
+    if (!res.ok) throw new Error('fetch failed');
+    const data = await res.json();
+    renderTrending(data.items || []);
+  } catch {
+    list.innerHTML = '<div class="trend-empty">Unable to load</div>';
+  }
+}
+
+function renderTrending(items) {
+  const list = document.getElementById('trendingList');
+  if (!list) return;
+  if (!items.length) {
+    list.innerHTML = '<div class="trend-empty">No trending items</div>';
+    return;
+  }
+  const typeIcon = { social: '🐦', reddit: '💬', news: '📰' };
+  list.innerHTML = items.map(item => `
+    <div class="trend-item">
+      <div class="trend-source">${typeIcon[item.source_type] || '📌'} ${escHtml(item.source)}</div>
+      <div class="trend-title">${escHtml(item.title)}</div>
+      ${item.pub_date ? `<div class="trend-time">${escHtml(item.pub_date)}</div>` : ''}
+    </div>
+  `).join('');
 }
 
 // ─── Utils ────────────────────────────────────────────────────────────────────

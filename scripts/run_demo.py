@@ -14,6 +14,7 @@ import re as _re
 import sys
 import threading
 import time
+import urllib.parse
 import urllib.request
 import uuid
 import webbrowser
@@ -545,6 +546,151 @@ def _news_response(query: str) -> dict:
     }
 
 
+# ─── Trending social / news fetcher ──────────────────────────────────────────
+# Sources tried in order per city: Nitter (Twitter RSS) → Reddit JSON → city news RSS
+
+_NITTER_INSTANCES = [
+    "https://nitter.poast.org",
+    "https://nitter.privacyredirect.com",
+    "https://nitter.1d4.us",
+    "https://nitter.cz",
+]
+
+_CITY_CONFIG = {
+    "up": {
+        "label": "Uttar Pradesh",
+        "news_q": "uttar+pradesh+news+today",
+        "nitter_q": "uttar pradesh OR lucknow OR #UPPolice",
+        "reddit_q": "uttar pradesh",
+    },
+    "lucknow": {
+        "label": "Lucknow",
+        "news_q": "lucknow+news",
+        "nitter_q": "lucknow",
+        "reddit_q": "lucknow uttar pradesh",
+    },
+    "varanasi": {
+        "label": "Varanasi",
+        "news_q": "varanasi+kashi+news",
+        "nitter_q": "varanasi OR kashi OR banaras",
+        "reddit_q": "varanasi",
+    },
+    "gorakhpur": {
+        "label": "Gorakhpur",
+        "news_q": "gorakhpur+news",
+        "nitter_q": "gorakhpur",
+        "reddit_q": "gorakhpur uttar pradesh",
+    },
+}
+
+_trending_cache: dict = {}  # city -> {"items": list, "fetched_at": datetime}
+_TRENDING_TTL = 900  # 15 minutes
+
+
+def _fetch_nitter_trending(query: str, max_items: int = 4) -> list[dict]:
+    for instance in _NITTER_INSTANCES:
+        try:
+            url = f"{instance}/search/rss?q={urllib.parse.quote(query)}&f=tweets"
+            req = urllib.request.Request(url, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            })
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                root = ET.fromstring(resp.read())
+            items = []
+            for item in root.findall(".//item")[:max_items]:
+                title = _strip_html(item.findtext("title", ""))[:140]
+                pub   = (item.findtext("pubDate", "") or "")[:22]
+                if title and len(title) > 20:
+                    items.append({"title": title, "source": "Twitter/X",
+                                  "source_type": "social", "pub_date": pub})
+            if items:
+                print(f"  [nitter] {instance}: {len(items)} tweets OK")
+                return items
+        except Exception as e:
+            print(f"  [nitter] {instance}: {e}")
+    return []
+
+
+def _fetch_reddit_trending(query: str, max_items: int = 3) -> list[dict]:
+    try:
+        encoded = urllib.parse.quote(query)
+        url = (f"https://www.reddit.com/search.json?q={encoded}"
+               f"&sort=hot&t=day&limit={max_items}&type=link")
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "matrix-ai-sahayak/1.0 (demo)"
+        })
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read())
+        items = []
+        for post in data.get("data", {}).get("children", []):
+            p = post.get("data", {})
+            title = (p.get("title", "") or "")[:140]
+            sub   = p.get("subreddit_name_prefixed", "r/?")
+            score = p.get("score", 0)
+            if title:
+                items.append({"title": title,
+                               "source": f"Reddit {sub}",
+                               "source_type": "reddit",
+                               "pub_date": f"{score} upvotes"})
+        print(f"  [reddit] {len(items)} posts for '{query}'")
+        return items
+    except Exception as e:
+        print(f"  [reddit] {e}")
+        return []
+
+
+def _fetch_city_news_rss(city_q: str, max_items: int = 4) -> list[dict]:
+    items_out = []
+    # 1. Google News city search
+    try:
+        url = (f"https://news.google.com/rss/search?q={city_q}"
+               "&hl=hi-IN&gl=IN&ceid=IN:hi")
+        raw = _fetch_rss(url, "Google News", max_items + 2)
+        items_out.extend(raw[:max_items])
+    except Exception as e:
+        print(f"  [city-news] Google: {e}")
+    # 2. Supplement from cached UP news filtered by city keyword
+    if len(items_out) < max_items:
+        kw = city_q.split("+")[0].lower()
+        for it in _news_cache.get("items", []):
+            if kw in (it["title"] + it["description"]).lower():
+                items_out.append(it)
+            if len(items_out) >= max_items:
+                break
+    return [
+        {"title": it["title"][:140], "source": it["source"],
+         "source_type": "news", "pub_date": it.get("pub_date", "")}
+        for it in items_out[:max_items]
+    ]
+
+
+def _build_trending(city: str) -> list[dict]:
+    cfg = _CITY_CONFIG.get(city, _CITY_CONFIG["up"])
+    result: list[dict] = []
+
+    # Layer 1 — social (Nitter/Twitter) — up to 3 items
+    social = _fetch_nitter_trending(cfg["nitter_q"])
+    result.extend(social[:3])
+
+    # Layer 2 — Reddit — up to 2 items
+    if len(result) < 5:
+        reddit = _fetch_reddit_trending(cfg["reddit_q"])
+        result.extend(reddit[: 5 - len(result)])
+
+    # Layer 3 — city news RSS — fill remaining slots up to 5
+    if len(result) < 5:
+        news = _fetch_city_news_rss(cfg["news_q"], 5 - len(result) + 1)
+        result.extend(news[: 5 - len(result)])
+
+    # Ultimate fallback — anything from global UP cache
+    if not result:
+        for it in _news_cache.get("items", [])[:5]:
+            result.append({"title": it["title"], "source": it["source"],
+                           "source_type": "news", "pub_date": it.get("pub_date", "")})
+
+    return result[:5]
+
+
 # ─── In-memory session store ───────────────────────────────────────────────────
 # { session_id: { "title": str, "messages": [...], "updated_at": str } }
 _sessions: dict = {}
@@ -693,6 +839,23 @@ async def demo_report(authorization: str = Header(default="Bearer demo")):
     if report_path.exists():
         return HTMLResponse(report_path.read_text())
     return HTMLResponse(_generate_inline_sample_report())
+
+
+@app.get("/api/v2/trending")
+async def get_trending(city: str = "up"):
+    import asyncio
+    city = city.lower()
+    if city not in _CITY_CONFIG:
+        city = "up"
+    now = datetime.utcnow()
+    cached = _trending_cache.get(city)
+    if cached and (now - cached["fetched_at"]).seconds < _TRENDING_TTL and cached["items"]:
+        return {"city": city, "label": _CITY_CONFIG[city]["label"],
+                "items": cached["items"], "cached": True}
+    items = await asyncio.to_thread(_build_trending, city)
+    _trending_cache[city] = {"items": items, "fetched_at": now}
+    return {"city": city, "label": _CITY_CONFIG[city]["label"],
+            "items": items, "cached": False}
 
 
 @app.get("/api/health")
